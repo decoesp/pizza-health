@@ -1,0 +1,13 @@
+Object.assign(process.env, { NODE_ENV: "test" });
+process.env.DB_MODE = "local";
+process.env.LOCAL_DB_PATH = ".data/test-pizza-health.db";
+process.env.NEXT_PUBLIC_SITE_URL = "http://localhost:3000";
+process.env.DOCUMENT_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString("base64");
+process.env.RATE_LIMIT_SALT = "test-salt-with-enough-length";
+process.env.SESSION_DAYS = "30";
+process.env.MAX_UPLOAD_BYTES = "8388608";
+process.env.SEED_DEMO = "1";
+process.env.SEED_DEMO_PASSWORD = "pizza-health-demo-2026";
+process.env.ADMIN_EMAIL = "ana@pizzahealth.app";
+process.env.ADMIN_PASSWORD = "pizza-health-demo-2026";
+process.env.ALLOW_RESET_LINK_IN_UI = "1";

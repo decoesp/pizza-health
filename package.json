@@ -1,0 +1,51 @@
+{
+  "name": "pizza-health",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Rede social privada de saúde e bem-estar para comunidades de amigos.",
+  "license": "MIT",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsgo --noEmit",
+    "test": "NODE_OPTIONS=--conditions=react-server tsx --test tests/*.test.ts",
+    "test:watch": "NODE_OPTIONS=--conditions=react-server tsx --test --watch tests/*.test.ts",
+    "test:e2e": "playwright test",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:seed": "tsx scripts/seed.ts",
+    "db:reset": "tsx scripts/reset.ts",
+    "db:status": "tsx scripts/status.ts",
+    "setup": "npm run db:migrate && npm run db:seed",
+    "verify": "npm run lint && npm run typecheck && npm test",
+    "typecheck:tsc": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "16.4.3",
+    "pg": "^8.16.3",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "server-only": "^0.0.1",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.11.0",
+    "@playwright/test": "^1.56.1",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^24.0.0",
+    "@types/pg": "^8.15.6",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@typescript/native-preview": "7.0.0-dev.20260707.2",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.3",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4",
+    "tsx": "^4.20.6",
+    "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

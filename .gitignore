@@ -1,0 +1,25 @@
+# Dependências e build
+node_modules/
+.next/
+out/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+next-env.d.ts
+
+# Banco local e dados de desenvolvimento
+.data/
+*.db
+*.db-shm
+*.db-wal
+
+# Credenciais — nunca versionar
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Sistema
+.DS_Store
+*.log
