@@ -281,7 +281,8 @@ Resultados reais da validação final (28/10/2026):
 - **Repositório:** <https://github.com/decoesp/pizza-health> (público; nenhum
   segredo está no código).
 - **Código em produção:** branch `main`, commit `c44289a` (MVP + Pizza Auth +
-  passkeys + importação do Apple Saúde + documentação).
+  passkeys + importação do Apple Saúde). A documentação segue em `56e79ee`; não
+  houve mudança de runtime depois do deploy.
 - **Health check:** `GET /api/health` responde `status: ok`, `database: local`.
 - **Login federado:** o callback de produção registrado no Pizza Auth é
   `https://health.pizzaria.foundation/auth/callback`. Esse host ainda **não
