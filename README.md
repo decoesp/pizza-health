@@ -227,7 +227,8 @@ Resultados reais da validação final (28/10/2026):
 - **Banco:** PizzaSQL `pizzaria/pizza-health` (PostgreSQL 14, dialeto restrito).
 - **Repositório:** <https://github.com/decoesp/pizza-health> (público; nenhum
   segredo está no código).
-- **Código em produção:** commit `c4dc177` (MVP + `tsx` em runtime + documentação).
+- **Código em produção:** branch `main`, no commit implantado após a validação
+  final (MVP + `tsx` em runtime + documentação).
 - **Health check:** `GET /api/health` responde `status: ok`, `database: remote`.
 
 A instância de demonstração foi semeada com dados fictícios e a conta
