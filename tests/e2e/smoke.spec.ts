@@ -80,3 +80,31 @@ test("layout móvel não cria rolagem horizontal", async ({ page }, testInfo) =>
     expect(overflow, `${path} criou rolagem horizontal`).toBe(false);
   }
 });
+
+test("upload, download e exclusão de documento", async ({ page }) => {
+  await login(page);
+  await page.goto("/exames/enviar");
+  const title = `Exame E2E ${Date.now()}`;
+  await page.getByLabel("Título do documento").fill(title);
+  await page.getByLabel("Arquivo").setInputFiles({
+    name: "exame-e2e.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF"),
+  });
+  await page.getByRole("button", { name: "Enviar documento" }).click();
+  await expect(page).toHaveURL(/\/exames\/doc_/, { timeout: 30_000 });
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(title);
+
+  const downloadUrl = await page
+    .getByRole("link", { name: /Baixar original/i })
+    .first()
+    .getAttribute("href");
+  expect(downloadUrl).toBeTruthy();
+  const response = await page.request.get(downloadUrl!);
+  expect(response.status()).toBe(200);
+  expect(response.headers()["content-type"]).toContain("application/pdf");
+
+  page.on("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "Excluir documento" }).click();
+  await expect(page).toHaveURL(/\/exames\?removido=1/, { timeout: 30_000 });
+});

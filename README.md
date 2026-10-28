@@ -206,8 +206,40 @@ Os testes de integração usam um SQLite temporário em `.data/test-pizza-health
 e cobrem isolamento entre usuários/comunidades, compartilhamento de categorias,
 acesso a documentos, feed por comunidade e idempotência de pontos.
 
-Resultados da última execução estão no fim deste documento (atualizados após a
-validação final).
+Resultados reais da validação final (28/10/2026):
+
+- `npm test`: **32 testes, 32 aprovados** (7 suítes).
+- `npm run typecheck` (`tsgo`): **0 erros**.
+- `npm run lint`: **0 erros e 0 avisos**.
+- `npm run build`: **sucesso** (Next.js 16.4.3, standalone, 39 rotas).
+- Playwright local: **26 aprovados, 12 ignorados** por projeto/dispositivo; os
+  ignorados são as execuções de axe no viewport móvel, que rodam só no desktop.
+- Produção (`https://pizza-health.app.pizzaria.foundation`): **7 smoke aprovados
+  (1 ignorado no desktop), 11 verificações de acessibilidade aprovadas e 1 teste
+  de upload/download/exclusão aprovado**.
+
+## Produção
+
+- **URL:** <https://pizza-health.app.pizzaria.foundation>
+- **Infra:** máquina `pizza-health` na organização `decoesp` do pizzabase VMS,
+  runtime Node 24, 1 GB de memória, disco de 2 GB, idle timeout de 300 s.
+- **Banco:** PizzaSQL `pizzaria/pizza-health` (PostgreSQL 14, dialeto restrito).
+- **Repositório:** <https://github.com/decoesp/pizza-health> (público; nenhum
+  segredo está no código).
+- **Código em produção:** commit `f51621e` (MVP + `tsx` em runtime).
+- **Health check:** `GET /api/health` responde `status: ok`, `database: remote`.
+
+A instância de demonstração foi semeada com dados fictícios e a conta
+`ana@pizzahealth.app` / `pizza-health-demo-2026`. **Troque essa senha no primeiro
+acesso** em Perfil → Segurança. O seed de produção roda com `SEED_DEMO=0`, então
+não recria dados demo em reinícios.
+
+> **Atenção operacional:** nesta plataforma, o `set_env` do MCP não foi propagado
+> ao comando de execução. O fallback usado foi um blob de ambiente codificado no
+> `run_cmd` da máquina. Isso mantém os segredos fora do repositório, mas quem tem
+> leitura na VMS consegue decodificá-los. Migre para o mecanismo de segredos da
+> plataforma assim que ele estiver disponível e rotacione as credenciais. Detalhes
+> em [`docs/deploy.md`](docs/deploy.md).
 
 ## Deploy
 

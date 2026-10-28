@@ -127,3 +127,10 @@ não está automatizada neste MVP. Planeje-a antes de um incidente real.
   continuam sendo conteúdo não confiável.
 - CSP depende do nonce aplicado pelo Next; validar a cada upgrade.
 - A avaliação jurídica e o contrato de operador precisam ser formalizados.
+- **Segredos de produção:** o `set_env` do MCP não foi propagado ao runtime nesta
+  instalação. O fallback codificou o ambiente em base64 no `run_cmd` da máquina.
+  Quem tem permissão de leitura na VMS pode decodificá-lo. Rotacione a chave de
+  documentos, o sal de rate limit e a senha do banco, e migre para o mecanismo de
+  segredos nativo assim que disponível.
+- O repositório é público. Nenhum segredo de runtime está nele, mas qualquer
+  vulnerabilidade de código é visível; mantenha dependências atualizadas.

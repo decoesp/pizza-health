@@ -4,14 +4,34 @@
 
 - Plataforma: pizzabase VMS, organização `decoesp`.
 - MCP: `pizzabase-vms` (`https://vms.pizzaria.foundation/mcp`).
-- Máquina: `pizza-health` (Node 24 Alpine, 1 GB+, porta 3000).
-- URL esperada: `https://pizza-health.app.pizzaria.foundation`.
+- Máquina: `pizza-health` (`m-kK9aMhT_GvRBqKU0ywvH9g`), Node 24 Alpine,
+  1 GB de memória, disco de 2 GB, porta 3000, idle timeout de 300 s.
+- URL: `https://pizza-health.app.pizzaria.foundation`.
 - Banco: PizzaSQL `pizzaria/pizza-health` em `db.database.pizza:5432`.
 - Runtime: Next.js standalone.
+- Repositório: `https://github.com/decoesp/pizza-health` (público).
 
 O token do MCP e a senha do banco são credenciais de operação. Não os coloque no
-repositório, em logs ou em mensagens. Use o mecanismo de segredos do ambiente e o
-`set_env` da máquina.
+repositório, em logs ou em mensagens. Em produção, use o mecanismo de segredos do
+ambiente.
+
+> **Lições desta instalação**
+>
+> 1. O build precisa de pelo menos 1 GB de memória. Com 256 MB, `next build` foi
+>    encerrado por OOM (exit 137). O ajuste aplicado foi `mem_size_mib=1024` e
+>    `disk_size_mb=2048`.
+> 2. O `build_cmd` é passado na linha de comando do kernel; quebras de linha
+>    fazem o comando ser truncado ("No build command"). Use uma única linha.
+> 3. Não apague `/app-src` no build. A plataforma coloca o código e o `.env` de
+>    build ali; `rm -rf` remove ambos. Use `cd /app-src` e apenas rode `npm ci` e
+>    `npm run build`.
+> 4. Nesta versão da plataforma, o `set_env` respondeu `ok` mas não apareceu no
+>    ambiente do `run_cmd` (nem como `.env` em `/app-src`). O fallback de produção
+>    foi codificar o arquivo de ambiente em base64 dentro do `run_cmd`, decodificar
+>    para `/tmp/pizza-health.env` e carregar com `set -a; . ...; set +a`.
+>    **Risco:** quem tem leitura da máquina consegue decodificar os segredos.
+>    Migre para segredos nativos da plataforma quando disponível e rotacione a
+>    chave de documentos, o sal e a senha do banco.
 
 ## Pré-requisitos
 
@@ -61,37 +81,26 @@ O seed é idempotente: não recria usuários existentes e não sobrescreve senha
 
 ## Build e execução
 
-Build na VMS (esquema do MCP `deploy_git_app`):
+Build efetivo na VMS (uma única linha; a plataforma já colocou o código em
+`/app-src`):
 
 ```bash
-set -e
-apk add --no-cache git openssh-client
-rm -rf /app-src
-git clone --depth=1 --branch main <REPO_URL> /app-src
-cd /app-src
-npm ci
-npm run build
-cp -r public .next/standalone/
-mkdir -p .next/standalone/.next
-cp -r .next/static .next/standalone/.next/
+set -e; apk add --no-cache git openssh-client; cd /app-src; npm ci; npm run build; if [ -d public ]; then cp -r public .next/standalone/; fi; mkdir -p .next/standalone/.next; cp -r .next/static .next/standalone/.next/
 ```
 
-Comando de execução:
+Comando de execução (o arquivo de ambiente é decodificado para `/tmp` antes de
+carregar):
 
 ```bash
-cd /app-src
-npm run db:migrate
-npm run db:seed
-DB_MODE=remote \
-PIZZA_API_KEY='***' \
-PIZZA_DB='pizzaria/pizza-health' \
-PIZZA_DB_HOST='db.database.pizza' \
-PORT=3000 HOSTNAME=0.0.0.0 \
-node .next/standalone/server.js
+cd /app-src && printf %s '<ENV_BASE64>' | base64 -d > /tmp/pizza-health.env \
+  && set -a && . /tmp/pizza-health.env && set +a \
+  && npm run db:migrate && npm run db:seed \
+  && node .next/standalone/server.js
 ```
 
 Alternativamente, `deploy_dockerfile_app` usa o `Dockerfile` incluído. Nesse caso,
-os segredos entram por `set_env` e as migrações precisam rodar antes do start.
+os segredos entram por `set_env` (se o runtime da plataforma os injetar) e as
+migrações precisam rodar antes do start.
 
 ## Variáveis de produção
 
