@@ -261,6 +261,12 @@ Teste manual mínimo:
 - Pizza Auth: o fluxo usa `state`/`nonce`/PKCE guardados no banco, troca o código
   no callback e conclui com um ticket de uso único em `/auth/oidc/complete`.
   Nenhum token do provedor é persistido.
+- Logout federado: só é disparado quando `OIDC_POST_LOGOUT_REDIRECT_URI` está
+  definida **e** registrada no provedor. Sem ela, o app encerra apenas a sessão
+  local para não terminar numa URL recusada. Enquanto o DNS de
+  `health.pizzaria.foundation` não existir, mantenha a variável de fora em
+  produção; depois do DNS, defina-a como `https://health.pizzaria.foundation` e
+  redeploye para encerrar também a sessão do Pizza Auth.
 - Apple Saúde: o upload é processado em memória; a prévia fica em
   `apple_health_imports` por até 24 h e o XML bruto nunca é gravado. O limite é
   `MAX_APPLE_IMPORT_BYTES` e a rota aceita até 4 importações por hora por usuário.

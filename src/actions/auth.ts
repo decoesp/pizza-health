@@ -17,7 +17,7 @@ import { requestIpHash } from "@/lib/request-context";
 import { ensureDefaultHabits } from "@/lib/data/habits";
 import { notify } from "@/lib/notifications";
 import { recordAudit } from "@/lib/audit";
-import { getEnv, oidcConfigured, oidcPostLogoutRedirectUri, siteUrl } from "@/lib/env";
+import { getEnv, siteUrl } from "@/lib/env";
 import { uniqueCommunitySlug } from "@/lib/domain/slug";
 import { cookies } from "next/headers";
 import type { ActionState } from "@/lib/actions/types";
@@ -226,11 +226,14 @@ export async function loginAction(
 
 export async function logoutAction(): Promise<void> {
   await destroySession();
-  if (oidcConfigured()) {
-    const env = getEnv();
+  const env = getEnv();
+  // O logout federado só é disparado quando existe uma URI de retorno
+  // registrada. Sem ela, o provedor recusaria o pedido e o usuário ficaria
+  // preso na tela de erro dele; nesse caso encerramos apenas a sessão local.
+  if (env.OIDC_CLIENT_SECRET && env.OIDC_POST_LOGOUT_REDIRECT_URI) {
     const url = new URL(`${env.OIDC_ISSUER.replace(/\/$/, "")}/logout`);
     url.searchParams.set("client_id", env.OIDC_CLIENT_ID);
-    url.searchParams.set("post_logout_redirect_uri", oidcPostLogoutRedirectUri());
+    url.searchParams.set("post_logout_redirect_uri", env.OIDC_POST_LOGOUT_REDIRECT_URI);
     redirect(url.toString());
   }
   redirect("/");

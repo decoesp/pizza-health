@@ -287,6 +287,9 @@ Resultados reais da validação final (28/10/2026):
   `191.252.200.77`, o botão do Pizza Auth em produção não conclui o fluxo e o
   login por senha/passkey segue como caminho suportado. O RP ID das passkeys é o
   hostname de `NEXT_PUBLIC_SITE_URL` (`pizza-health.app.pizzaria.foundation`).
+  O logout federado fica desligado em produção até o DNS existir
+  (`OIDC_POST_LOGOUT_REDIRECT_URI` ausente), para não redirecionar para um host
+  inacessível.
 
 A instância de demonstração foi semeada com dados fictícios e a conta
 `ana@pizzahealth.app` / `pizza-health-demo-2026`. **Troque essa senha no primeiro
