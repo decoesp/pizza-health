@@ -214,9 +214,10 @@ Resultados reais da validação final (28/10/2026):
 - `npm run build`: **sucesso** (Next.js 16.4.3, standalone, 39 rotas).
 - Playwright local: **26 aprovados, 12 ignorados** por projeto/dispositivo; os
   ignorados são as execuções de axe no viewport móvel, que rodam só no desktop.
-- Produção (`https://pizza-health.app.pizzaria.foundation`): **7 smoke aprovados
-  (1 ignorado no desktop), 11 verificações de acessibilidade aprovadas e 1 teste
-  de upload/download/exclusão aprovado**.
+- Produção (`https://pizza-health.app.pizzaria.foundation`): **9 testes de fumaça,
+  8 aprovados e 1 ignorado (verificação móvel no projeto desktop)**. O oitavo teste
+  cobre upload, download autenticado e exclusão de um PDF. As **11 verificações de
+  acessibilidade** também passaram contra a produção.
 
 ## Produção
 
@@ -226,7 +227,7 @@ Resultados reais da validação final (28/10/2026):
 - **Banco:** PizzaSQL `pizzaria/pizza-health` (PostgreSQL 14, dialeto restrito).
 - **Repositório:** <https://github.com/decoesp/pizza-health> (público; nenhum
   segredo está no código).
-- **Código em produção:** commit `f51621e` (MVP + `tsx` em runtime).
+- **Código em produção:** commit `c4dc177` (MVP + `tsx` em runtime + documentação).
 - **Health check:** `GET /api/health` responde `status: ok`, `database: remote`.
 
 A instância de demonstração foi semeada com dados fictícios e a conta
