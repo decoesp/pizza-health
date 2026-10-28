@@ -4,8 +4,9 @@
 
 - Plataforma: pizzabase VMS, organização `decoesp`.
 - MCP: `pizzabase-vms` (`https://vms.pizzaria.foundation/mcp`).
-- Máquina: `pizza-health` (`m-kK9aMhT_GvRBqKU0ywvH9g`), Node 24 Alpine,
+- Máquina: `pizza-health` (`m-kK9aMhT_GvRBqKU0ywvH9g`), Node 22 Alpine,
   1 GB de memória, disco de 2 GB, porta 3000, idle timeout de 300 s.
+- Deploy ativo: `d-1793198001516` (commit `8f8f4b3`).
 - URL: `https://pizza-health.app.pizzaria.foundation`.
 - Banco: PizzaSQL `pizzaria/pizza-health` em `db.database.pizza:5432`.
 - Runtime: Next.js standalone.
@@ -35,6 +36,12 @@ ambiente.
 > 5. Limpe `.next` antes do build. Artefatos de `standalone` de um deploy anterior
 >    fizeram o build seguinte falhar com `ENOTDIR` ao tentar ler
 >    `.next/standalone/.next/static`. O comando final inclui `rm -rf .next`.
+> 6. A imagem `node:24-alpine` ficou com o filesystem corrompido
+>    (`ext4_validate_inode_bitmap`, `apk database` ausente) e não aceitava mais
+>    builds. A solução foi trocar para `node:22-alpine`, que também é compatível
+>    com o Next 16, e clonar o repositório explicitamente no build. Em imagens
+>    novas, `/app-src` pode não existir; o clone garante o código. O build de uma
+>    imagem nova pode exigir uma primeira execução para instalar `git`.
 
 ## Pré-requisitos
 
@@ -88,7 +95,7 @@ Build efetivo na VMS (uma única linha; a plataforma já colocou o código em
 `/app-src`):
 
 ```bash
-set -e; apk add --no-cache git openssh-client; cd /app-src; rm -rf .next; npm ci; npm run build; if [ -d public ]; then cp -r public .next/standalone/; fi; mkdir -p .next/standalone/.next; cp -r .next/static .next/standalone/.next/
+set -e; if [ -f /app-src/.env ]; then cp /app-src/.env /tmp/ph-build.env; fi; rm -rf /app-src; git clone --depth=1 --branch main https://github.com/decoesp/pizza-health.git /app-src; if [ -f /tmp/ph-build.env ]; then cp /tmp/ph-build.env /app-src/.env; fi; cd /app-src; rm -rf .next; NEXT_PUBLIC_SITE_URL=https://pizza-health.app.pizzaria.foundation npm ci; NEXT_PUBLIC_SITE_URL=https://pizza-health.app.pizzaria.foundation npm run build; if [ -d public ]; then cp -r public .next/standalone/; fi; mkdir -p .next/standalone/.next; cp -r .next/static .next/standalone/.next/
 ```
 
 Comando de execução (o arquivo de ambiente é decodificado para `/tmp` antes de
@@ -135,7 +142,7 @@ migrações precisam rodar antes do start.
    - `name`: `pizza-health`
    - `repo`: URL do repositório
    - `branch`: `main`
-   - `docker_image`: `node:24-alpine`
+   - `docker_image`: `node:22-alpine`
    - `port`: `3000`
    - `build_cmd`: script acima
    - `run_cmd`: comando acima, sem segredos embutidos

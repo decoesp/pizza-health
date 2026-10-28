@@ -223,7 +223,8 @@ Resultados reais da validação final (28/10/2026):
 
 - **URL:** <https://pizza-health.app.pizzaria.foundation>
 - **Infra:** máquina `pizza-health` na organização `decoesp` do pizzabase VMS,
-  runtime Node 24, 1 GB de memória, disco de 2 GB, idle timeout de 300 s.
+  runtime Node 22 Alpine, 1 GB de memória, disco de 2 GB, idle timeout de 300 s.
+  O deploy ativo é `d-1793198001516`, no commit `8f8f4b3`.
 - **Banco:** PizzaSQL `pizzaria/pizza-health` (PostgreSQL 14, dialeto restrito).
 - **Repositório:** <https://github.com/decoesp/pizza-health> (público; nenhum
   segredo está no código).
@@ -246,7 +247,7 @@ não recria dados demo em reinícios.
 ## Deploy
 
 O deploy de produção usa o MCP `pizzabase-vms` na organização `decoesp`, com
-runtime Node 24 e o banco `pizzaria/pizza-health`. O passo a passo, as variáveis e
+runtime Node 22 Alpine e o banco `pizzaria/pizza-health`. O passo a passo, as variáveis e
 os cuidados estão em [`docs/deploy.md`](docs/deploy.md).
 
 ## Limitações conhecidas
