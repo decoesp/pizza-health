@@ -32,6 +32,9 @@ ambiente.
 >    **Risco:** quem tem leitura da máquina consegue decodificar os segredos.
 >    Migre para segredos nativos da plataforma quando disponível e rotacione a
 >    chave de documentos, o sal e a senha do banco.
+> 5. Limpe `.next` antes do build. Artefatos de `standalone` de um deploy anterior
+>    fizeram o build seguinte falhar com `ENOTDIR` ao tentar ler
+>    `.next/standalone/.next/static`. O comando final inclui `rm -rf .next`.
 
 ## Pré-requisitos
 
@@ -85,7 +88,7 @@ Build efetivo na VMS (uma única linha; a plataforma já colocou o código em
 `/app-src`):
 
 ```bash
-set -e; apk add --no-cache git openssh-client; cd /app-src; npm ci; npm run build; if [ -d public ]; then cp -r public .next/standalone/; fi; mkdir -p .next/standalone/.next; cp -r .next/static .next/standalone/.next/
+set -e; apk add --no-cache git openssh-client; cd /app-src; rm -rf .next; npm ci; npm run build; if [ -d public ]; then cp -r public .next/standalone/; fi; mkdir -p .next/standalone/.next; cp -r .next/static .next/standalone/.next/
 ```
 
 Comando de execução (o arquivo de ambiente é decodificado para `/tmp` antes de
