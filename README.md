@@ -214,41 +214,58 @@ Resultados reais da validação final (28/10/2026):
 - `npm run build`: **sucesso** (Next.js 16.4.3, standalone, 39 rotas).
 - Playwright local: **26 aprovados, 12 ignorados** por projeto/dispositivo; os
   ignorados são as execuções de axe no viewport móvel, que rodam só no desktop.
-- Produção (`https://pizza-health.app.pizzaria.foundation`): **9 testes de fumaça,
-  8 aprovados e 1 ignorado (verificação móvel no projeto desktop)**. O oitavo teste
-  cobre upload, download autenticado e exclusão de um PDF. As **11 verificações de
-  acessibilidade** também passaram contra a produção.
+- Produção (`https://pizza-health.app.pizzaria.foundation`): **39 aprovados,
+  19 ignorados, 0 falhas** (52,1 s), em desktop e mobile. A suíte cobre axe em 17
+  páginas, login, ranking, exportação, upload/download/exclusão de PDF,
+  revogação de convite, entrada por link novo e exclusão de conta. A persistência
+  foi confirmada após stop/start da máquina.
 
 ## Produção
 
 - **URL:** <https://pizza-health.app.pizzaria.foundation>
-- **Infra:** máquina `pizza-health` na organização `decoesp` do pizzabase VMS,
-  runtime Node 22 Alpine, 1 GB de memória, disco de 2 GB, idle timeout de 300 s.
-  O deploy ativo é `d-1793198001516`, no commit `8f8f4b3`.
-- **Banco:** PizzaSQL `pizzaria/pizza-health` (PostgreSQL 14, dialeto restrito).
+- **Infra:** máquina `pizza-health` (`m-W2-BJrN7dGOErzGPin97qg`) na organização
+  `decoesp` do pizzabase VMS, imagem `node:22.18-alpine3.21`, 2 GB de memória,
+  disco de 2 GB, idle timeout de 300 s. O deploy ativo é `d-1793210624625`,
+  status `ready`.
+- **Banco em produção:** SQLite local em `/work/.data/pizza-health.db`
+  (`DB_MODE=local`), com persistência real no disco da máquina.
+- **Banco remoto de reserva:** PizzaSQL `pizzaria/pizza-health` (PostgreSQL 14,
+  dialeto restrito), intacto e com seed demo limpo. A organização está com a cota
+  de 8 conexões esgotada por conexões órfãs no proxy; por isso a produção usa
+  SQLite local.
 - **Repositório:** <https://github.com/decoesp/pizza-health> (público; nenhum
   segredo está no código).
 - **Código em produção:** branch `main`, no commit implantado após a validação
   final (MVP + `tsx` em runtime + documentação).
-- **Health check:** `GET /api/health` responde `status: ok`, `database: remote`.
+- **Health check:** `GET /api/health` responde `status: ok`, `database: local`.
 
 A instância de demonstração foi semeada com dados fictícios e a conta
 `ana@pizzahealth.app` / `pizza-health-demo-2026`. **Troque essa senha no primeiro
-acesso** em Perfil → Segurança. O seed de produção roda com `SEED_DEMO=0`, então
-não recria dados demo em reinícios.
+acesso** em Perfil → Segurança. O seed usa `SEED_DEMO=1` apenas na demo; em uma
+instância real, use `SEED_DEMO=0` com `ADMIN_EMAIL`/`ADMIN_PASSWORD`.
 
-> **Atenção operacional:** nesta plataforma, o `set_env` do MCP não foi propagado
-> ao comando de execução. O fallback usado foi um blob de ambiente codificado no
-> `run_cmd` da máquina. Isso mantém os segredos fora do repositório, mas quem tem
-> leitura na VMS consegue decodificá-los. Migre para o mecanismo de segredos da
-> plataforma assim que ele estiver disponível e rotacione as credenciais. Detalhes
-> em [`docs/deploy.md`](docs/deploy.md).
+> **Atenção operacional (SQLite local):** cada deploy executa `rm -rf /work` e
+> recria o banco do zero. Exporte os dados antes de redeployar ou faça backup do
+> arquivo. O banco sobrevive a stop/start e sleep da máquina, mas não a um novo
+> deploy. Quando a cota do PizzaSQL for restabelecida, o modo remoto pode ser
+> reativado trocando `DB_MODE` para `remote`. Detalhes em
+> [`docs/deploy.md`](docs/deploy.md).
+
+> **Atenção de segurança:** nesta plataforma, o `set_env` do MCP não foi
+> propagado ao comando de execução. O fallback usado foi um blob de ambiente
+> codificado no `run_cmd` da máquina. Isso mantém os segredos fora do repositório,
+> mas quem tem leitura na VMS consegue decodificá-los; a chave do banco apareceu
+> nos logs da máquina. A chave de documentos e o sal foram rotacionados. **A
+> `PIZZA_API_KEY` ainda precisa ser rotacionada no provedor pelo titular da
+> conta.** Migre para o mecanismo de segredos da plataforma assim que estiver
+> disponível.
 
 ## Deploy
 
 O deploy de produção usa o MCP `pizzabase-vms` na organização `decoesp`, com
-runtime Node 22 Alpine e o banco `pizzaria/pizza-health`. O passo a passo, as variáveis e
-os cuidados estão em [`docs/deploy.md`](docs/deploy.md).
+runtime Node 22.18 Alpine e SQLite local. O banco remoto `pizzaria/pizza-health`
+fica como reserva até a cota de conexões ser restabelecida. O passo a passo, as
+variáveis e os cuidados estão em [`docs/deploy.md`](docs/deploy.md).
 
 ## Limitações conhecidas
 
