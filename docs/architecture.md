@@ -132,6 +132,47 @@ O PizzaSQL não aplica cascade. A exclusão de conta executa, em uma transação
 
 Eventos de auditoria permanecem com `actor_id = NULL` para segurança operacional.
 
+### 9. Login federado sem acoplar a sessão ao provedor
+
+O Pizza Auth é usado só para autenticar. O fluxo:
+
+1. `/auth/oidc/start` lê o discovery, gera `state`, `nonce` e `code_verifier`,
+   guarda apenas o hash do `state` em `oidc_states` (10 min) e redireciona para
+   `/authorize` com PKCE S256 e escopos `openid profile email offline_access`.
+2. `/auth/callback` consome o `state` uma única vez, troca o código com o
+   `code_verifier` e valida o `id_token` com `jose` (RS256 via JWKS, `iss`, `aud`,
+   `exp`, `nonce`).
+3. A conta é localizada por `oauth_accounts (provider, sub)`; se o e-mail ainda
+   não existir, o provisionamento reaproveita o mesmo caminho do cadastro
+   (`provisionUser`). Nada do provedor é sobrescrito no perfil.
+4. O callback emite um ticket de uso único (hash no banco, 5 min) e redireciona
+   para `/auth/oidc/complete` no host principal, que cria a sessão própria.
+
+O desvio pelo ticket existe porque o callback de produção fica em outro host
+(`health.`); assim o cookie de sessão nunca precisa atravessar hosts. Tokens do
+provedor não são persistidos e a sessão local não depende do TTL de 24 h do
+refresh token.
+
+### 10. Passkeys como segundo método, nunca único
+
+WebAuthn usa `@simplewebauthn/server` com RP ID derivado de
+`NEXT_PUBLIC_SITE_URL` (ou `WEBAUTHN_RP_ID`), `userVerification: required` e
+challenge de uso único guardado como hash em `webauthn_challenges`, amarrado ao
+navegador por cookie `httpOnly`. O contador é atualizado a cada login para
+detectar clonagem. O e-mail é opcional: sem ele, o fluxo usa credencial
+descobrível. Senha e Pizza Auth continuam disponíveis, então perder o dispositivo
+não bloqueia a conta.
+
+### 11. Importação do Apple Saúde com prévia e reversão
+
+O `export.zip` é lido em streaming (`yauzl` + `sax`), sem gravar o XML. Só quatro
+métricas entram, limitadas aos últimos 365 dias: água, sono, movimento
+(exercício declarado ou treino, o maior dos dois) e passos. O resultado agregado
+por dia fica em `apple_health_imports` por até 24 h como prévia; ao confirmar,
+cada dia vira `habit_entries` com `source='import'` e `import_id`, sem pontos.
+Dias com registro manual são preservados. Desfazer remove apenas as linhas
+daquele `import_id`.
+
 ## Fluxos principais
 
 ### Cadastro

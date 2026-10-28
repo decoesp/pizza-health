@@ -13,6 +13,9 @@ const e2eEnv = {
   ADMIN_EMAIL: "ana@pizzahealth.app",
   ADMIN_PASSWORD: "pizza-health-demo-2026",
   ALLOW_RESET_LINK_IN_UI: "1",
+  // WebAuthn não aceita IP como RP ID; o teste usa http://localhost:3000.
+  WEBAUTHN_RP_ID: "localhost",
+  WEBAUTHN_RP_NAME: "Pizza Health",
 };
 
 export default defineConfig({

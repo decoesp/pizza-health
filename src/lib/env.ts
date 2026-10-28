@@ -29,6 +29,19 @@ const envSchema = z.object({
   ADMIN_EMAIL: z.string().email().optional(),
   ADMIN_PASSWORD: z.string().min(8).optional(),
   ALLOW_RESET_LINK_IN_UI: booleanString,
+  OIDC_ISSUER: z.string().url().default("https://auth.pizzaria.foundation"),
+  OIDC_CLIENT_ID: z.string().min(1).default("pizza-healt"),
+  OIDC_CLIENT_SECRET: z.string().min(16).optional(),
+  OIDC_REDIRECT_URI: z.string().url().optional(),
+  OIDC_POST_LOGOUT_REDIRECT_URI: z.string().url().optional(),
+  WEBAUTHN_RP_ID: z.string().min(1).optional(),
+  WEBAUTHN_RP_NAME: z.string().min(1).default("Pizza Health"),
+  MAX_APPLE_IMPORT_BYTES: z.coerce
+    .number()
+    .int()
+    .min(1024)
+    .max(209_715_200)
+    .default(52_428_800),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -54,4 +67,27 @@ export function resetEnvForTests(): void {
 
 export function siteUrl(): string {
   return getEnv().NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
+}
+
+export function oidcConfigured(): boolean {
+  return Boolean(getEnv().OIDC_CLIENT_SECRET);
+}
+
+export function oidcRedirectUri(): string {
+  const env = getEnv();
+  return env.OIDC_REDIRECT_URI ?? `${siteUrl()}/auth/callback`;
+}
+
+export function oidcPostLogoutRedirectUri(): string {
+  const env = getEnv();
+  return env.OIDC_POST_LOGOUT_REDIRECT_URI ?? siteUrl();
+}
+
+export function webauthnRpId(): string {
+  const env = getEnv();
+  return env.WEBAUTHN_RP_ID ?? new URL(siteUrl()).hostname;
+}
+
+export function webauthnOrigin(): string {
+  return new URL(siteUrl()).origin;
 }

@@ -124,7 +124,8 @@ export default async function ProfilePage() {
         <div className="space-y-4">
           {([
             ["/perfil/privacidade", "Privacidade e notificações", "lock", "Escolha o que cada comunidade vê."],
-            ["/perfil/seguranca", "Segurança", "shield", "Senha, sessões e encerramento remoto."],
+            ["/perfil/seguranca", "Segurança", "shield", "Senha, passkeys, sessões e encerramento remoto."],
+            ["/perfil/importar", "Importar Apple Saúde", "activity", "Água, sono, movimento e passos do iPhone."],
             ["/perfil/dados", "Seus dados", "file", "Exportar, corrigir ou excluir a conta."],
             ["/perfil/conquistas", "Conquistas", "trophy", `${achievements.length} desbloqueada${achievements.length === 1 ? "" : "s"}.`],
           ] as const).map(([href, title, icon, description]) => (

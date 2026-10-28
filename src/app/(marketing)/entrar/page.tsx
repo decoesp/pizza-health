@@ -3,6 +3,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
 import { loginAction } from "@/actions/auth";
+import { oidcConfigured } from "@/lib/env";
+import { PasskeyLogin } from "@/components/auth/PasskeyLogin";
 import { ActionForm } from "@/components/ui/ActionForm";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { Field, Input, Notice } from "@/components/ui/Primitives";
@@ -13,12 +15,13 @@ export const metadata: Metadata = { title: "Entrar" };
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; redefinida?: string; encerradas?: string }>;
+  searchParams: Promise<{ next?: string; redefinida?: string; encerradas?: string; erro?: string }>;
 }) {
   const user = await getCurrentUser();
   if (user) redirect("/inicio");
   const params = await searchParams;
   const next = typeof params.next === "string" ? params.next : "/inicio";
+  const pizzaAuth = oidcConfigured();
 
   return (
     <div className="container-page grid gap-10 py-12 lg:grid-cols-[1fr_460px] lg:items-center lg:py-20">
@@ -71,6 +74,63 @@ export default async function LoginPage({
             <Notice tone="info">Todas as sessões foram encerradas. Entre novamente.</Notice>
           </div>
         ) : null}
+        {params.erro === "oidc" ? (
+          <div className="mt-4">
+            <Notice tone="warning">
+              Não foi possível concluir o login com Pizza Auth. Tente novamente ou
+              entre com e-mail e senha.
+            </Notice>
+          </div>
+        ) : null}
+        {params.erro === "termos" ? (
+          <div className="mt-4">
+            <Notice tone="warning">
+              Para entrar com Pizza Auth, aceite os termos e a política de
+              privacidade.
+            </Notice>
+          </div>
+        ) : null}
+
+        {pizzaAuth ? (
+          <form action="/auth/oidc/start" method="get" className="mt-5 space-y-3">
+            <input type="hidden" name="next" value={next} />
+            <label className="flex items-start gap-2 text-xs text-muted">
+              <input
+                type="checkbox"
+                name="accept"
+                value="1"
+                required
+                className="mt-0.5 h-4 w-4 rounded border-line accent-[#C2410C]"
+              />
+              <span>
+                Li e aceito os{" "}
+                <Link href="/termos" className="font-semibold text-tomato hover:underline">
+                  termos
+                </Link>{" "}
+                e a{" "}
+                <Link href="/privacidade" className="font-semibold text-tomato hover:underline">
+                  política de privacidade
+                </Link>
+                .
+              </span>
+            </label>
+            <button
+              type="submit"
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-ink px-4 py-2.5 text-sm font-semibold text-paper hover:bg-ink-soft"
+            >
+              <span aria-hidden>🍕</span>
+              Entrar com Pizza Auth
+            </button>
+          </form>
+        ) : null}
+
+        {pizzaAuth ? (
+          <div className="my-5 flex items-center gap-3 text-[0.7rem] font-semibold tracking-wide text-muted uppercase">
+            <span className="h-px flex-1 bg-line" />
+            ou com e-mail e senha
+            <span className="h-px flex-1 bg-line" />
+          </div>
+        ) : null}
 
         <ActionForm action={loginAction} className="mt-5 space-y-4">
           <input type="hidden" name="next" value={next} />
@@ -105,6 +165,8 @@ export default async function LoginPage({
             Entrar
           </SubmitButton>
         </ActionForm>
+
+        <PasskeyLogin next={next} />
 
         <p className="mt-5 text-center text-sm text-muted">
           Ainda não tem conta?{" "}

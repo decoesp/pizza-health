@@ -5,6 +5,9 @@ import { Card, Field, Input, Notice, PageHeader } from "@/components/ui/Primitiv
 import { ActionForm } from "@/components/ui/ActionForm";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { changePasswordAction, logoutAllAction } from "@/actions/auth";
+import { deletePasskeyAction } from "@/actions/passkeys";
+import { countPasskeys, listPasskeys } from "@/lib/auth/webauthn";
+import { PasskeyManager } from "@/components/auth/PasskeyManager";
 import { formatDateTime } from "@/lib/domain/dates";
 
 export const metadata: Metadata = { title: "Segurança" };
@@ -12,9 +15,11 @@ export const dynamic = "force-dynamic";
 
 export default async function SecurityPage() {
   const user = await requireUser("/perfil/seguranca");
-  const [sessions, count] = await Promise.all([
+  const [sessions, count, passkeys, passkeyCount] = await Promise.all([
     listActiveSessions(user.id),
     countActiveSessions(user.id),
+    listPasskeys(user.id),
+    countPasskeys(user.id),
   ]);
 
   return (
@@ -51,6 +56,38 @@ export default async function SecurityPage() {
             </div>
             <SubmitButton pendingLabel="Atualizando…">Atualizar senha</SubmitButton>
           </ActionForm>
+        </Card>
+
+        <Card className="p-5">
+          <h2 className="text-base font-semibold">Passkeys</h2>
+          <PasskeyManager count={passkeyCount} />
+          {passkeys.length > 0 ? (
+            <ul className="mt-4 divide-y divide-line">
+              {passkeys.map((passkey) => (
+                <li key={passkey.id} className="flex items-center justify-between gap-3 py-2.5">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{passkey.name}</p>
+                    <p className="text-xs text-muted">
+                      cadastrada em {formatDateTime(passkey.createdAt)}
+                      {passkey.lastUsedAt
+                        ? ` · usada em ${formatDateTime(passkey.lastUsedAt)}`
+                        : " · ainda não usada"}
+                    </p>
+                  </div>
+                  <ActionForm action={deletePasskeyAction} className="shrink-0">
+                    <input type="hidden" name="passkeyId" value={passkey.id} />
+                    <SubmitButton size="sm" variant="danger" pendingLabel="Removendo…">
+                      Remover
+                    </SubmitButton>
+                  </ActionForm>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-3 text-sm text-muted">
+              Nenhuma passkey cadastrada. Cadastre uma para entrar sem senha.
+            </p>
+          )}
         </Card>
 
         <Card className="p-5">

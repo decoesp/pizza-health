@@ -15,6 +15,17 @@ Booleanos são `INTEGER` 0/1. Medidas são `REAL`. O schema está em
 | `password_resets` | token hash de uso único, expiração | `user_id` |
 | `legal_acceptances` | termos, privacidade, dados de saúde | `user_id` |
 | `data_requests` | exportação e exclusão | `user_id` |
+| `oauth_accounts` | vínculo `(provider, sub)` do Pizza Auth | `user_id` |
+| `oidc_states` | hash do state, nonce, verifier, destino, expiração | efêmera (10 min) |
+| `login_tickets` | hash do ticket de uso único, destino, expiração | `user_id`; 5 min |
+| `webauthn_credentials` | credencial pública, contador, transports, rótulo | `user_id`; `credential_id` único |
+| `webauthn_challenges` | desafio de cadastro/login | efêmera (5 min) |
+
+`oauth_accounts` guarda apenas o identificador do provedor e o e-mail usado no
+vínculo; nenhum token OIDC é persistido. `oidc_states`, `login_tickets` e
+`webauthn_challenges` são apagados ao serem consumidos e também por expiração.
+O e-mail do provedor só cria conta nova se ainda não existir `users.email`
+correspondente; caso exista, o `sub` é vinculado à conta local.
 
 `users.deleted_at` marca a conta anonimizada. O e-mail é trocado por
 `deleted+{id}@invalid.local` e a senha por um valor aleatório.
@@ -51,7 +62,11 @@ autor. Reações têm único `(post_id, user_id, kind)`.
 | `personal_goals` | meta diária ou semanal |
 
 `habit_entries` tem único `(user_id, habit_type_id, entry_date)`. O índice
-`(user_id, entry_date)` atende o dashboard e o histórico.
+`(user_id, entry_date)` atende o dashboard e o histórico. A coluna `import_id`
+liga registros criados por importação ao lote em `apple_health_imports`
+(`preview` → `applied` → `undone`/`failed`), permitindo reverter sem tocar em
+registros manuais. O payload guarda apenas os dias agregados e é esvaziado após
+a aplicação.
 
 ### Documentos e exames
 

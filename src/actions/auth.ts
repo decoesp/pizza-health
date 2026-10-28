@@ -17,7 +17,8 @@ import { requestIpHash } from "@/lib/request-context";
 import { ensureDefaultHabits } from "@/lib/data/habits";
 import { notify } from "@/lib/notifications";
 import { recordAudit } from "@/lib/audit";
-import { siteUrl } from "@/lib/env";
+import { getEnv, oidcConfigured, oidcPostLogoutRedirectUri, siteUrl } from "@/lib/env";
+import { uniqueCommunitySlug } from "@/lib/domain/slug";
 import { cookies } from "next/headers";
 import type { ActionState } from "@/lib/actions/types";
 
@@ -27,30 +28,6 @@ function safeNext(value: unknown, fallback = "/inicio"): string {
   if (typeof value !== "string") return fallback;
   if (!value.startsWith("/") || value.startsWith("//")) return fallback;
   return value;
-}
-
-function slugify(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 40);
-}
-
-async function uniqueSlug(base: string): Promise<string> {
-  const root = slugify(base) || "comunidade";
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const suffix = generateToken().slice(0, 6).toLowerCase();
-    const candidate = `${root}-${suffix}`;
-    const existing = await queryOne<{ id: string }>(
-      "SELECT id FROM communities WHERE slug = ? LIMIT 1",
-      [candidate],
-    );
-    if (!existing) return candidate;
-  }
-  return `${root}-${Date.now().toString(36)}`;
 }
 
 export async function registerAction(
@@ -114,7 +91,7 @@ export async function registerAction(
   const colors = ["#C2410C", "#3F6B4F", "#8A5A0F", "#4C6FA8", "#8A5A8F"];
   const color = colors[Math.floor(Math.random() * colors.length)] ?? "#C2410C";
   const communityId = newId("com");
-  const slug = await uniqueSlug(`cuidado-${data.name}`);
+  const slug = await uniqueCommunitySlug(`cuidado-${data.name}`);
   const firstName = data.name.split(/\s+/)[0] || data.name;
 
   await withTransaction(async (tx) => {
@@ -249,6 +226,13 @@ export async function loginAction(
 
 export async function logoutAction(): Promise<void> {
   await destroySession();
+  if (oidcConfigured()) {
+    const env = getEnv();
+    const url = new URL(`${env.OIDC_ISSUER.replace(/\/$/, "")}/logout`);
+    url.searchParams.set("client_id", env.OIDC_CLIENT_ID);
+    url.searchParams.set("post_logout_redirect_uri", oidcPostLogoutRedirectUri());
+    redirect(url.toString());
+  }
   redirect("/");
 }
 

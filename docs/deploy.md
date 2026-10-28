@@ -160,8 +160,24 @@ migrações precisam rodar antes do start.
 | `ADMIN_EMAIL` | sim no primeiro boot | cria a conta administrativa |
 | `ADMIN_PASSWORD` | sim no primeiro boot | use senha forte e rotacione |
 | `ALLOW_RESET_LINK_IN_UI` | sim | `0` em produção |
+| `OIDC_ISSUER` | não | padrão `https://auth.pizzaria.foundation` |
+| `OIDC_CLIENT_ID` | não | padrão `pizza-healt` |
+| `OIDC_CLIENT_SECRET` | para login federado | segredo do cliente; nunca versionar |
+| `OIDC_REDIRECT_URI` | sim com OIDC | `https://health.pizzaria.foundation/auth/callback` |
+| `OIDC_POST_LOGOUT_REDIRECT_URI` | sim com OIDC | `https://health.pizzaria.foundation` |
+| `WEBAUTHN_RP_ID` | sim | `pizza-health.app.pizzaria.foundation` (domínio, sem porta) |
+| `WEBAUTHN_RP_NAME` | não | `Pizza Health` |
+| `MAX_APPLE_IMPORT_BYTES` | não | padrão 50 MB; máximo 200 MB |
 
 `NEXT_PUBLIC_SITE_URL` é público por definição. As demais variáveis são segredos.
+
+> **Domínio do callback:** o cliente `pizza-healt` só aceita as URIs exatas
+> `https://health.pizzaria.foundation/auth/callback`,
+> `http://localhost:3000/auth/callback` e `http://localhost:8080/auth/callback`.
+> Como `health.pizzaria.foundation` ainda não tem registro DNS, o login federado
+> em produção só funciona depois de criar esse `A`/`CNAME` apontando para
+> `191.252.200.77`. Não altere a URI para o host `app.` — não está registrada e o
+> provedor recusa com `redirect_uri` inválido.
 
 Arquivos locais usados na operação (fora do repositório, `chmod 600`):
 
@@ -230,7 +246,26 @@ Teste manual mínimo:
 - gerar convite e abrir em outro navegador;
 - enviar PDF e baixar;
 - confirmar que outro membro não vê o documento sem compartilhamento;
-- sair do ranking e confirmar que o nome some.
+- sair do ranking e confirmar que o nome some;
+- cadastrar uma passkey em Perfil → Segurança e entrar com ela em outra janela;
+- importar um `export.xml` de teste em Perfil → Importar Apple Saúde, confirmar a
+  prévia, aplicar e desfazer;
+- quando o DNS de `health.pizzaria.foundation` existir, testar o botão do Pizza
+  Auth no host canônico e conferir o retorno em `/auth/callback`.
+
+### Auth e importação em produção
+
+- Passkeys: `WEBAUTHN_RP_ID` deve ser exatamente o host usado no navegador
+  (`pizza-health.app.pizzaria.foundation`). Trocar de domínio invalida as
+  passkeys já cadastradas.
+- Pizza Auth: o fluxo usa `state`/`nonce`/PKCE guardados no banco, troca o código
+  no callback e conclui com um ticket de uso único em `/auth/oidc/complete`.
+  Nenhum token do provedor é persistido.
+- Apple Saúde: o upload é processado em memória; a prévia fica em
+  `apple_health_imports` por até 24 h e o XML bruto nunca é gravado. O limite é
+  `MAX_APPLE_IMPORT_BYTES` e a rota aceita até 4 importações por hora por usuário.
+- Após um redeploy, a tabela `apple_health_imports` volta vazia junto com o banco
+  SQLite local. Exporte antes se precisar manter histórico.
 
 ## Operação
 

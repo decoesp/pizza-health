@@ -79,10 +79,18 @@ export default async function HabitsPage() {
         title="Diário de hábitos"
         description="Registre o que já aconteceu. Sem metas médicas universais, sem cobrança de perfeição."
         action={
-          <Badge tone="basil">
-            <Icon name="activity" size={12} />
-            {streak} dia{streak === 1 ? "" : "s"} de sequência
-          </Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone="basil">
+              <Icon name="activity" size={12} />
+              {streak} dia{streak === 1 ? "" : "s"} de sequência
+            </Badge>
+            <Link
+              href="/perfil/importar"
+              className="rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-semibold hover:bg-surface-soft"
+            >
+              Importar Apple Saúde
+            </Link>
+          </div>
         }
       />
 

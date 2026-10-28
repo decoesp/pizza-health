@@ -43,6 +43,29 @@
 - Logout global disponível.
 - Redefinição por token de 1 hora, uso único, guardado como hash.
 
+### Login federado e passkeys
+- Pizza Auth por authorization code + PKCE S256; `state` de 32 bytes guardado só
+  como hash, uso único e expiração de 10 min.
+- `nonce` obrigatório e conferido após a validação da assinatura.
+- `id_token` RS256 validado via JWKS do discovery, com `iss`, `aud`, `exp` e
+  tolerância de 30 s; endpoints vêm do discovery, não do código.
+- Nenhum token do provedor (access/refresh/id) é persistido; a sessão local é
+  emitida por ticket de uso único (5 min) no host principal.
+- Vínculo por `sub`, não por e-mail; conta existente com o mesmo e-mail é
+  vinculada, não recriada.
+- WebAuthn com `userVerification: required`, challenge de uso único por cookie
+  `httpOnly`, contador anti-clonagem e limite de 10 passkeys por conta.
+- Rate limit por IP nas rotas de opções/verificação de passkey e no início do
+  OIDC.
+
+### Apple Saúde
+- Upload limitado por `MAX_APPLE_IMPORT_BYTES` (50 MB por padrão) e 4 tentativas
+  por hora por usuário.
+- Processamento em memória; o XML bruto não é gravado em disco nem no banco.
+- Apenas quatro métricas não clínicas e janela de 12 meses.
+- Prévia expira em 24 h; aplicação e reversão conferem `user_id` em cada consulta.
+- Nenhum ponto de ranking é gerado por importação.
+
 ### Documentos
 - Limite de 8 MB por arquivo; Server Action limitada a 12 MB.
 - Assinatura binária obrigatória para PDF, PNG, JPEG, XLS e XLSX; CSV validado como
@@ -118,7 +141,9 @@ não está automatizada neste MVP. Planeje-a antes de um incidente real.
 
 ## Riscos residuais e pendências
 
-- Sem MFA; recomendável para contas administrativas.
+- Sem MFA por TOTP; passkeys cobrem o segundo fator no dispositivo, mas contas
+  administrativas ainda podem depender só de senha se nenhuma passkey for
+  cadastrada.
 - Sem envio de e-mail; recuperação depende de admin.
 - Rate limit em memória, por instância.
 - Sem backup/restore verificado do PizzaSQL no produto; depende do provedor.
@@ -134,3 +159,13 @@ não está automatizada neste MVP. Planeje-a antes de um incidente real.
   segredos nativo assim que disponível.
 - O repositório é público. Nenhum segredo de runtime está nele, mas qualquer
   vulnerabilidade de código é visível; mantenha dependências atualizadas.
+- **Domínio do callback OIDC:** `health.pizzaria.foundation` ainda não resolve;
+  até o DNS existir, o login federado em produção não conclui. O caminho de
+  senha/passkey permanece funcional.
+- **Vinculação por e-mail:** o primeiro login OIDC vincula automaticamente uma
+  conta local com o mesmo e-mail. Isso é aceitável porque o emissor é único e
+  confiável (Pizza Auth) e o e-mail vem assinado; se o provedor passar a aceitar
+  múltiplos emissores, exija confirmação explícita de vínculo.
+- **Clients públicos:** passkeys não substituem a senha como único fator; um
+  dispositivo perdido pode ser removido em Perfil → Segurança por quem tiver a
+  senha.

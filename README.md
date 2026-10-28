@@ -4,16 +4,24 @@ Rede social privada de saúde e bem-estar para comunidades de amigos. O produto
 organiza hábitos, exames, vacinas e desafios sem transformar dados clínicos em
 conteúdo público e sem classificar pessoas como "saudáveis" ou "doentes".
 
-> **Estado:** MVP funcional, com autenticação, comunidades por convite, feed,
-> hábitos, metas, documentos criptografados, exames estruturados, vacinas,
-> desafios, ranking de participação, notificações, exportação e exclusão de dados.
-> A avaliação jurídica específica da instância ainda é necessária antes de um
+> **Estado:** MVP funcional, com autenticação própria e federada (Pizza Auth
+> OIDC), passkeys, comunidades por convite, feed, hábitos, metas, importação do
+> Apple Saúde, documentos criptografados, exames estruturados, vacinas, desafios,
+> ranking de participação, notificações, exportação e exclusão de dados. A
+> avaliação jurídica específica da instância ainda é necessária antes de um
 > lançamento público.
 
 ## O que está implementado
 
 ### Conta e privacidade
 - Cadastro, login, logout, recuperação por link de uso único e troca de senha.
+- Login federado com **Pizza Auth** (OIDC authorization code + PKCE S256, nonce,
+  validação de `iss`/`aud`/`exp` e assinatura RS256 via JWKS obtido por discovery).
+  A conta local é vinculada pelo `sub`; o primeiro login provisiona usuário,
+  comunidade pessoal, preferências e hábitos padrão.
+- **Passkeys** (WebAuthn) como segundo fator de entrada: cadastro em Perfil →
+  Segurança, login sem senha com Face ID/Touch ID/Windows Hello/chave de
+  segurança, limite de 10 por conta e remoção a qualquer momento.
 - Sessões com token aleatório guardado como hash, cookie `httpOnly`, `SameSite=Lax`
   e `Secure` em produção.
 - Perfil com nome, bio, cidade e cor de avatar.
@@ -45,6 +53,18 @@ conteúdo público e sem classificar pessoas como "saudáveis" ou "doentes".
 - Gráficos SVG de 7 e 14 dias, sequência de constância e tabela semanal.
 - Registro manual com bloqueio de datas futuras e limite de 12 meses.
 - Compartilhamento explícito de um registro no feed, nunca automático.
+
+### Importação do Apple Saúde
+- Envio de `export.zip` (ou `export.xml`) gerado pelo app Saúde do iPhone.
+- Leitura em streaming com `sax`, inclusive dentro do ZIP, sem gravar o XML bruto.
+- Apenas água, sono, movimento e passos dos últimos 12 meses; sono tem segmentos
+  sobrepostos unificados e duração limitada a 24 h por dia.
+- Prévia agregada por dia antes de confirmar; dias que já têm registro manual são
+  preservados, não sobrescritos.
+- Importação com `source=import` e `import_id`, permitindo **desfazer** e remover
+  apenas o que veio do arquivo.
+- Nenhum ponto de ranking é concedido por importação; o arquivo é processado em
+  memória e descartado.
 
 ### Exames e documentos
 - Upload de PDF, CSV, XLS, XLSX, JPG e PNG com validação pela assinatura binária.
@@ -105,6 +125,8 @@ conteúdo público e sem classificar pessoas como "saudáveis" ou "doentes".
 - React 19.3 e TypeScript estrito (`noUncheckedIndexedAccess`)
 - Tailwind CSS 4
 - `zod` para validação
+- `jose` para OIDC/JWT (RS256 via JWKS) e `@simplewebauthn/*` para passkeys
+- `sax` + `yauzl` para o parser streaming do export do Apple Saúde
 - `node:sqlite` no desenvolvimento local; `pg` para o PizzaSQL remoto
 - `node:test` + `tsx` para testes de unidade/integração
 - Playwright + axe-core para E2E e acessibilidade
@@ -128,6 +150,13 @@ npm run dev
 ```
 
 Abra <http://localhost:3000>.
+
+Login com Pizza Auth é opcional em desenvolvimento: sem `OIDC_CLIENT_SECRET` o
+botão federado não aparece e tudo funciona por senha/passkey. Para habilitar,
+preencha `OIDC_CLIENT_SECRET` (nunca versione) e mantenha
+`OIDC_REDIRECT_URI=http://localhost:3000/auth/callback`, que já está registrado
+no cliente `pizza-healt`. Use <http://localhost:3000>, não `127.0.0.1`: o RP ID
+das passkeys é `localhost` (IP não é aceito pelo WebAuthn).
 
 Conta demo criada pelo seed local:
 
@@ -176,6 +205,14 @@ desligue `SEED_DEMO` e defina `ADMIN_EMAIL`/`ADMIN_PASSWORD` com uma senha real.
 | `ADMIN_EMAIL` | — | Conta administrativa criada pelo seed |
 | `ADMIN_PASSWORD` | — | Senha da conta administrativa |
 | `ALLOW_RESET_LINK_IN_UI` | `0` | Mostra o link de redefinição na resposta em dev |
+| `OIDC_ISSUER` | `https://auth.pizzaria.foundation` | Emissor do Pizza Auth |
+| `OIDC_CLIENT_ID` | `pizza-healt` | Cliente registrado no Pizza Auth |
+| `OIDC_CLIENT_SECRET` | — | Segredo do cliente (obrigatório para habilitar o login federado) |
+| `OIDC_REDIRECT_URI` | `{site}/auth/callback` | URI exata registrada no cliente |
+| `OIDC_POST_LOGOUT_REDIRECT_URI` | `{site}` | Destino do logout no provedor |
+| `WEBAUTHN_RP_ID` | host de `NEXT_PUBLIC_SITE_URL` | RP ID das passkeys (domínio, sem porta) |
+| `WEBAUTHN_RP_NAME` | `Pizza Health` | Nome exibido no diálogo do dispositivo |
+| `MAX_APPLE_IMPORT_BYTES` | `52428800` | Limite do `export.zip` (máx. 200 MB) |
 
 Nunca versione `.env.local`. Em produção, configure os valores pelo mecanismo de
 segredos da infraestrutura.
@@ -204,21 +241,27 @@ npm run test:e2e
 
 Os testes de integração usam um SQLite temporário em `.data/test-pizza-health.db`
 e cobrem isolamento entre usuários/comunidades, compartilhamento de categorias,
-acesso a documentos, feed por comunidade e idempotência de pontos.
+acesso a documentos, feed por comunidade e idempotência de pontos. `tests/oidc.test.ts`
+exercita o fluxo completo do Pizza Auth com um provedor simulado (PKCE S256,
+nonce, `iss`/`aud`, JWKS RS256, provisionamento, reuso de conta e ticket de uso
+único). `tests/apple-health.test.ts` cobre agregação, sono sobreposto, `export.xml`
+e `export.zip`.
 
 Resultados reais da validação final (28/10/2026):
 
-- `npm test`: **32 testes, 32 aprovados** (7 suítes).
+- `npm test`: **44 testes, 44 aprovados** (8 suítes).
 - `npm run typecheck` (`tsgo`): **0 erros**.
 - `npm run lint`: **0 erros e 0 avisos**.
-- `npm run build`: **sucesso** (Next.js 16.4.3, standalone, 39 rotas).
-- Playwright local: **26 aprovados, 12 ignorados** por projeto/dispositivo; os
-  ignorados são as execuções de axe no viewport móvel, que rodam só no desktop.
+- `npm run build`: **sucesso** (Next.js 16.4.3, standalone, 43 rotas).
+- Playwright local: suíte completa em desktop e mobile, incluindo
+  `tests/e2e/auth-import.spec.ts` (passkey com autenticador virtual, importação e
+  reversão do Apple Saúde).
 - Produção (`https://pizza-health.app.pizzaria.foundation`): **39 aprovados,
-  19 ignorados, 0 falhas** (52,1 s), em desktop e mobile. A suíte cobre axe em 17
-  páginas, login, ranking, exportação, upload/download/exclusão de PDF,
-  revogação de convite, entrada por link novo e exclusão de conta. A persistência
-  foi confirmada após stop/start da máquina.
+  19 ignorados, 0 falhas** (52,1 s), em desktop e mobile, na validação anterior à
+  chegada de OIDC/passkeys/importação. A suíte cobre axe em 17 páginas, login,
+  ranking, exportação, upload/download/exclusão de PDF, revogação de convite,
+  entrada por link novo e exclusão de conta. A persistência foi confirmada após
+  stop/start da máquina.
 
 ## Produção
 
@@ -238,6 +281,12 @@ Resultados reais da validação final (28/10/2026):
 - **Código em produção:** branch `main`, no commit implantado após a validação
   final (MVP + `tsx` em runtime + documentação).
 - **Health check:** `GET /api/health` responde `status: ok`, `database: local`.
+- **Login federado:** o callback de produção registrado no Pizza Auth é
+  `https://health.pizzaria.foundation/auth/callback`. Esse host ainda **não
+  resolve em DNS** (NXDOMAIN); enquanto o registro `A` não apontar para
+  `191.252.200.77`, o botão do Pizza Auth em produção não conclui o fluxo e o
+  login por senha/passkey segue como caminho suportado. O RP ID das passkeys é o
+  hostname de `NEXT_PUBLIC_SITE_URL` (`pizza-health.app.pizzaria.foundation`).
 
 A instância de demonstração foi semeada com dados fictícios e a conta
 `ana@pizzahealth.app` / `pizza-health-demo-2026`. **Troque essa senha no primeiro
@@ -280,6 +329,16 @@ variáveis e os cuidados estão em [`docs/deploy.md`](docs/deploy.md).
   orçamento de 20 MB.
 - Não há aplicativo móvel nativo; a interface é responsiva e testada em viewport
   móvel.
+- A importação do Apple Saúde é manual (`export.zip`), não há sincronização
+  contínua com o HealthKit. Só água, sono, movimento e passos são aproveitados.
+- Passkeys exigem um dispositivo/navegador compatível; senha e Pizza Auth sempre
+  continuam disponíveis como alternativa.
+- Os tokens do Pizza Auth (access/id de 30 min, refresh de 24 h, sem rotação) não
+  são usados para manter sessão: a sessão local é própria e independente. O
+  refresh token é solicitado via `offline_access` apenas para compatibilidade
+  com o provedor.
+- O callback de produção do Pizza Auth depende do DNS de
+  `health.pizzaria.foundation`, pendente fora do repositório.
 - A avaliação jurídica e o contrato de tratamento de dados precisam ser feitos
   pelo operador antes de uso público.
 

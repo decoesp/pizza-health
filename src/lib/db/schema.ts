@@ -373,6 +373,81 @@ const initial = [
   `CREATE INDEX IF NOT EXISTS data_requests_user_idx ON data_requests (user_id, created_at)`,
 ];
 
+const federatedAuth = [
+  `CREATE TABLE IF NOT EXISTS oauth_accounts (
+    id TEXT PRIMARY KEY,
+    provider TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    email TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE (provider, subject)
+  )`,
+  `CREATE INDEX IF NOT EXISTS oauth_accounts_user_idx ON oauth_accounts (user_id)`,
+
+  `CREATE TABLE IF NOT EXISTS oidc_states (
+    state_hash TEXT PRIMARY KEY,
+    nonce TEXT NOT NULL,
+    code_verifier TEXT NOT NULL,
+    next_path TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS oidc_states_expiry_idx ON oidc_states (expires_at)`,
+
+  `CREATE TABLE IF NOT EXISTS login_tickets (
+    ticket_hash TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    next_path TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    used_at TEXT
+  )`,
+  `CREATE INDEX IF NOT EXISTS login_tickets_user_idx ON login_tickets (user_id)`,
+
+  `CREATE TABLE IF NOT EXISTS webauthn_credentials (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    credential_id TEXT NOT NULL UNIQUE,
+    public_key TEXT NOT NULL,
+    counter INTEGER NOT NULL DEFAULT 0,
+    transports TEXT,
+    device_type TEXT,
+    backed_up INTEGER NOT NULL DEFAULT 0,
+    name TEXT,
+    created_at TEXT NOT NULL,
+    last_used_at TEXT
+  )`,
+  `CREATE INDEX IF NOT EXISTS webauthn_credentials_user_idx ON webauthn_credentials (user_id)`,
+
+  `CREATE TABLE IF NOT EXISTS webauthn_challenges (
+    id_hash TEXT PRIMARY KEY,
+    user_id TEXT,
+    kind TEXT NOT NULL CHECK (kind IN ('register','authenticate')),
+    challenge TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS webauthn_challenges_expiry_idx ON webauthn_challenges (expires_at)`,
+
+  `CREATE TABLE IF NOT EXISTS apple_health_imports (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    filename TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'preview' CHECK (status IN ('preview','applied','undone','failed')),
+    payload TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    applied_at TEXT,
+    undone_at TEXT
+  )`,
+  `CREATE INDEX IF NOT EXISTS apple_health_imports_user_idx ON apple_health_imports (user_id, created_at)`,
+
+  `ALTER TABLE habit_entries ADD COLUMN import_id TEXT`,
+  `CREATE INDEX IF NOT EXISTS habit_entries_import_idx ON habit_entries (import_id)`,
+];
+
 export type Migration = {
   version: string;
   statements: string[];
@@ -382,5 +457,9 @@ export const MIGRATIONS: Migration[] = [
   {
     version: "001_initial",
     statements: initial,
+  },
+  {
+    version: "002_federated_auth_and_imports",
+    statements: federatedAuth,
   },
 ];
