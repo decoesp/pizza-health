@@ -31,6 +31,23 @@ test("download de documento sem sessão retorna 401", async ({ page }) => {
   expect(response.status()).toBe(401);
 });
 
+test("exportação sem sessão retorna 401", async ({ page }) => {
+  const response = await page.request.get("/api/export");
+  expect(response.status()).toBe(401);
+});
+
+test("exportação de dados não inclui segredos", async ({ page }) => {
+  await login(page);
+  const response = await page.request.get("/api/export");
+  expect(response.status()).toBe(200);
+  expect(response.headers()["cache-control"]).toContain("no-store");
+  const payload = await response.json();
+  expect(payload.formatVersion).toBe(1);
+  expect(payload.account.email).toBe(DEMO_EMAIL);
+  expect(payload.account).not.toHaveProperty("password_hash");
+  expect(JSON.stringify(payload)).not.toMatch(/password_hash|token_hash|passwordHash/i);
+});
+
 test("login demo abre o painel", async ({ page }) => {
   await login(page);
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Ana");

@@ -60,14 +60,47 @@ function getRemotePool(): Pool {
     database: env.PIZZA_DB,
     ssl: false,
     max: env.DATABASE_POOL_MAX,
-    idleTimeoutMillis: 15_000,
-    connectionTimeoutMillis: 8_000,
+    idleTimeoutMillis: 0,
+    keepAlive: true,
+    connectionTimeoutMillis: 15_000,
     application_name: "pizza-health",
   });
   remotePool.on("error", (error) => {
     console.error("[db] cliente ocioso falhou", error.message);
   });
   return remotePool;
+}
+
+function isConnectionQuotaError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: string }).code === "53300"
+  );
+}
+
+async function wait(ms: number) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * O PizzaSQL limita conexões por organização e a cota é compartilhada entre
+ * aplicações. Mantemos uma conexão viva e, se a abertura for recusada por cota,
+ * tentamos novamente com espera curta antes de devolver o erro.
+ */
+async function remoteQuery(sql: string, params: DbParam[]) {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      return await getRemotePool().query(toPostgresPlaceholders(sql), params);
+    } catch (error) {
+      lastError = error;
+      if (!isConnectionQuotaError(error) || attempt === 3) throw error;
+      await wait(300 * 3 ** attempt);
+    }
+  }
+  throw lastError;
 }
 
 function toPostgresPlaceholders(sql: string): string {
@@ -130,7 +163,7 @@ export async function query<T extends DbRow = DbRow>(
   if (dbMode() === "local") {
     return localRunner(getLocal()).query<T>(sql, params);
   }
-  const result = await getRemotePool().query(toPostgresPlaceholders(sql), params);
+  const result = await remoteQuery(sql, params);
   return (result.rows as DbRow[]).map(normalizeRow) as T[];
 }
 
@@ -149,7 +182,7 @@ export async function execute(
   if (dbMode() === "local") {
     return localRunner(getLocal()).execute(sql, params);
   }
-  const result = await getRemotePool().query(toPostgresPlaceholders(sql), params);
+  const result = await remoteQuery(sql, params);
   return { rowsAffected: result.rowCount ?? 0 };
 }
 
@@ -180,7 +213,18 @@ export async function withTransaction<T>(
     }
   }
 
-  const client = await getRemotePool().connect();
+  let lastError: unknown;
+  let client: PoolClient | null = null;
+  for (let attempt = 0; attempt < 4 && !client; attempt += 1) {
+    try {
+      client = await getRemotePool().connect();
+    } catch (error) {
+      lastError = error;
+      if (!isConnectionQuotaError(error) || attempt === 3) throw error;
+      await wait(300 * 3 ** attempt);
+    }
+  }
+  if (!client) throw lastError;
   try {
     await client.query("BEGIN");
     const result = await fn(clientRunner(client));

@@ -51,8 +51,14 @@ const appPages = [
   { name: "comunidade", path: "/comunidade/mesa-de-domingo" },
   { name: "habitos", path: "/habitos" },
   { name: "exames", path: "/exames" },
+  { name: "enviar exame", path: "/exames/enviar" },
+  { name: "vacinas", path: "/vacinas" },
+  { name: "desafios", path: "/desafios" },
   { name: "ranking", path: "/ranking" },
+  { name: "notificacoes", path: "/notificacoes" },
   { name: "perfil", path: "/perfil" },
+  { name: "perfil dados", path: "/perfil/dados" },
+  { name: "perfil seguranca", path: "/perfil/seguranca" },
 ];
 
 for (const pageInfo of appPages) {
