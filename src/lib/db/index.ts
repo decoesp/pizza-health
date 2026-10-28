@@ -60,6 +60,7 @@ function getRemotePool(): Pool {
     database: env.PIZZA_DB,
     ssl: false,
     max: env.DATABASE_POOL_MAX,
+    min: 1,
     idleTimeoutMillis: 0,
     keepAlive: true,
     connectionTimeoutMillis: 15_000,
@@ -68,6 +69,12 @@ function getRemotePool(): Pool {
   remotePool.on("error", (error) => {
     console.error("[db] cliente ocioso falhou", error.message);
   });
+  // A cota do PizzaSQL é compartilhada. Um pulso periódico mantém a única
+  // conexão viva e evita reconectar a cada intervalo ocioso do servidor.
+  const keepAlive = setInterval(() => {
+    void remotePool?.query("SELECT 1").catch(() => undefined);
+  }, 20_000);
+  keepAlive.unref();
   return remotePool;
 }
 
@@ -91,12 +98,12 @@ async function wait(ms: number) {
  */
 async function remoteQuery(sql: string, params: DbParam[]) {
   let lastError: unknown;
-  for (let attempt = 0; attempt < 4; attempt += 1) {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
       return await getRemotePool().query(toPostgresPlaceholders(sql), params);
     } catch (error) {
       lastError = error;
-      if (!isConnectionQuotaError(error) || attempt === 3) throw error;
+      if (!isConnectionQuotaError(error) || attempt === 4) throw error;
       await wait(300 * 3 ** attempt);
     }
   }
@@ -215,12 +222,12 @@ export async function withTransaction<T>(
 
   let lastError: unknown;
   let client: PoolClient | null = null;
-  for (let attempt = 0; attempt < 4 && !client; attempt += 1) {
+  for (let attempt = 0; attempt < 5 && !client; attempt += 1) {
     try {
       client = await getRemotePool().connect();
     } catch (error) {
       lastError = error;
-      if (!isConnectionQuotaError(error) || attempt === 3) throw error;
+      if (!isConnectionQuotaError(error) || attempt === 4) throw error;
       await wait(300 * 3 ** attempt);
     }
   }
