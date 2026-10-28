@@ -256,20 +256,22 @@ Resultados reais da validação final (28/10/2026):
 - Playwright local: suíte completa em desktop e mobile, incluindo
   `tests/e2e/auth-import.spec.ts` (passkey com autenticador virtual, importação e
   reversão do Apple Saúde).
-- Produção (`https://pizza-health.app.pizzaria.foundation`): **39 aprovados,
-  19 ignorados, 0 falhas** (52,1 s), em desktop e mobile, na validação anterior à
-  chegada de OIDC/passkeys/importação. A suíte cobre axe em 17 páginas, login,
-  ranking, exportação, upload/download/exclusão de PDF, revogação de convite,
-  entrada por link novo e exclusão de conta. A persistência foi confirmada após
-  stop/start da máquina.
+- Produção (`https://pizza-health.app.pizzaria.foundation`): **44 aprovados,
+  20 ignorados, 0 falhas** (1,3 min), em desktop e mobile, incluindo passkey com
+  autenticador virtual e importação/reversão do Apple Saúde. A suíte cobre axe em
+  17 páginas, login, ranking, exportação, upload/download/exclusão de PDF,
+  revogação de convite, entrada por link novo e exclusão de conta. A persistência
+  foi confirmada após restart da máquina, com o banco restaurado do backup
+  `/root/ph-backup` apenas quando `/work` é recriado.
 
 ## Produção
 
 - **URL:** <https://pizza-health.app.pizzaria.foundation>
 - **Infra:** máquina `pizza-health` (`m-W2-BJrN7dGOErzGPin97qg`) na organização
   `decoesp` do pizzabase VMS, imagem `node:22.18-alpine3.21`, 2 GB de memória,
-  disco de 2 GB, idle timeout de 300 s. O deploy ativo é `d-1793210624625`,
-  status `ready`.
+  disco de 2 GB, idle timeout de 300 s. O deploy ativo é `d-1793216262589`,
+  status `ready`, com `health.pizzaria.foundation` registrado como domínio
+  customizado (dependente de DNS).
 - **Banco em produção:** SQLite local em `/work/.data/pizza-health.db`
   (`DB_MODE=local`), com persistência real no disco da máquina.
 - **Banco remoto de reserva:** PizzaSQL `pizzaria/pizza-health` (PostgreSQL 14,
@@ -278,8 +280,8 @@ Resultados reais da validação final (28/10/2026):
   SQLite local.
 - **Repositório:** <https://github.com/decoesp/pizza-health> (público; nenhum
   segredo está no código).
-- **Código em produção:** branch `main`, no commit implantado após a validação
-  final (MVP + `tsx` em runtime + documentação).
+- **Código em produção:** branch `main`, commit `c44289a` (MVP + Pizza Auth +
+  passkeys + importação do Apple Saúde + documentação).
 - **Health check:** `GET /api/health` responde `status: ok`, `database: local`.
 - **Login federado:** o callback de produção registrado no Pizza Auth é
   `https://health.pizzaria.foundation/auth/callback`. Esse host ainda **não
@@ -297,10 +299,13 @@ acesso** em Perfil → Segurança. O seed usa `SEED_DEMO=1` apenas na demo; em u
 instância real, use `SEED_DEMO=0` com `ADMIN_EMAIL`/`ADMIN_PASSWORD`.
 
 > **Atenção operacional (SQLite local):** cada deploy executa `rm -rf /work` e
-> recria o banco do zero. Exporte os dados antes de redeployar ou faça backup do
-> arquivo. O banco sobrevive a stop/start e sleep da máquina, mas não a um novo
-> deploy. Quando a cota do PizzaSQL for restabelecida, o modo remoto pode ser
-> reativado trocando `DB_MODE` para `remote`. Detalhes em
+> recria o banco do zero. O `build_cmd` copia `.data/pizza-health.db*` para
+> `/root/ph-backup` antes da limpeza e o `run_cmd` restaura esse arquivo somente
+> se o banco ainda não existir, para que stop/start não sobrescreva dados novos.
+> Ainda assim, exporte os dados antes de um redeploy destrutivo ou faça backup do
+> arquivo. O banco sobrevive a stop/start e sleep da máquina, mas um novo deploy
+> depende dessa cópia de segurança. Quando a cota do PizzaSQL for restabelecida, o
+> modo remoto pode ser reativado trocando `DB_MODE` para `remote`. Detalhes em
 > [`docs/deploy.md`](docs/deploy.md).
 
 > **Atenção de segurança:** nesta plataforma, o `set_env` do MCP não foi

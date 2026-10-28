@@ -291,9 +291,12 @@ Como o deploy recria `/work`, o backup precisa ser externo:
 2. Para backup operacional completo, copiar o arquivo SQLite para fora da VMS
    (por exemplo, via `run_cmd` com `base64` para um destino aprovado) e guardar
    com o mesmo cuidado de um banco de produção.
-3. Um novo deploy **não** preserva o arquivo. Se precisar manter dados, restaure
-   o arquivo após o deploy e antes do primeiro acesso, ou migre para o banco
-   remoto.
+3. Um novo deploy **não** preserva `/work` por si só. O `build_cmd` atual copia
+   `.data/pizza-health.db*` para `/root/ph-backup` antes do `rm -rf /work`, e o
+   `run_cmd` restaura a cópia **apenas se o banco não existir** (primeiro boot
+   após o build). Isso preserva os dados entre deploys e evita sobrescrever dados
+   novos em restart. Para um backup externo, copie o arquivo para fora da VMS; a
+   cópia em `/root` está no mesmo disco e não protege contra perda da máquina.
 
 O PizzaSQL não expõe ferramenta de backup no MCP. O operador deve acordar com o
 provedor uma rotina de backup/restore e testá-la. A exportação por usuário não
