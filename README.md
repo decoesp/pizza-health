@@ -55,7 +55,9 @@ conteúdo público e sem classificar pessoas como "saudáveis" ou "doentes".
 - Compartilhamento explícito de um registro no feed, nunca automático.
 
 ### Importação do Apple Saúde
-- Envio de `export.zip` (ou `export.xml`) gerado pelo app Saúde do iPhone.
+- Envio de `export.zip` (ou `export.xml`) gerado pelo app Saúde do iPhone,
+  com limite configurável (padrão 50 MB; produção em 120 MB). A rota de upload
+  fica fora do matcher do proxy para o corpo grande não ser truncado.
 - Leitura em streaming com `sax`, inclusive dentro do ZIP, sem gravar o XML bruto.
 - Apenas água, sono, movimento e passos dos últimos 12 meses; sono tem segmentos
   sobrepostos unificados e duração limitada a 24 h por dia.
@@ -212,7 +214,7 @@ desligue `SEED_DEMO` e defina `ADMIN_EMAIL`/`ADMIN_PASSWORD` com uma senha real.
 | `OIDC_POST_LOGOUT_REDIRECT_URI` | `{site}` | Destino do logout no provedor |
 | `WEBAUTHN_RP_ID` | host de `NEXT_PUBLIC_SITE_URL` | RP ID das passkeys (domínio, sem porta) |
 | `WEBAUTHN_RP_NAME` | `Pizza Health` | Nome exibido no diálogo do dispositivo |
-| `MAX_APPLE_IMPORT_BYTES` | `52428800` | Limite do `export.zip` (máx. 200 MB) |
+| `MAX_APPLE_IMPORT_BYTES` | `52428800` | Limite do `export.zip` (máx. 200 MB); produção em 120 MB |
 
 Nunca versione `.env.local`. Em produção, configure os valores pelo mecanismo de
 segredos da infraestrutura.

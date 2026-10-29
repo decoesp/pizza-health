@@ -167,7 +167,7 @@ migrações precisam rodar antes do start.
 | `OIDC_POST_LOGOUT_REDIRECT_URI` | sim com OIDC | `https://health.pizzaria.foundation` |
 | `WEBAUTHN_RP_ID` | sim | `pizza-health.app.pizzaria.foundation` (domínio, sem porta) |
 | `WEBAUTHN_RP_NAME` | não | `Pizza Health` |
-| `MAX_APPLE_IMPORT_BYTES` | não | padrão 50 MB; máximo 200 MB |
+| `MAX_APPLE_IMPORT_BYTES` | não | padrão 50 MB; produção em 120 MB; máximo 200 MB |
 
 `NEXT_PUBLIC_SITE_URL` é público por definição. As demais variáveis são segredos.
 
@@ -267,7 +267,9 @@ Teste manual mínimo:
   `health.pizzaria.foundation` não existir, mantenha a variável de fora em
   produção; depois do DNS, defina-a como `https://health.pizzaria.foundation` e
   redeploye para encerrar também a sessão do Pizza Auth.
-- Apple Saúde: o upload é processado em memória; a prévia fica em
+- Apple Saúde: a rota `/api/import/apple-health/preview` está fora do matcher do
+  proxy (o proxy clona o corpo e truncava em 10 MB); o limite real é
+  `MAX_APPLE_IMPORT_BYTES` e o corpo é processado em memória. A prévia fica em
   `apple_health_imports` por até 24 h e o XML bruto nunca é gravado. O limite é
   `MAX_APPLE_IMPORT_BYTES` e a rota aceita até 4 importações por hora por usuário.
 - Após um redeploy, a tabela `apple_health_imports` volta vazia junto com o banco

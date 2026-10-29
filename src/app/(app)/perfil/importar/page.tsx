@@ -6,6 +6,7 @@ import { Card, Notice, PageHeader } from "@/components/ui/Primitives";
 import { AppleHealthImport } from "@/components/import/AppleHealthImport";
 import { UndoImportButton } from "@/components/import/UndoImportButton";
 import { formatDateTime } from "@/lib/domain/dates";
+import { getEnv } from "@/lib/env";
 
 export const metadata: Metadata = { title: "Importar Apple Saúde" };
 export const dynamic = "force-dynamic";
@@ -20,13 +21,14 @@ const STATUS_LABEL: Record<string, string> = {
 export default async function ImportPage() {
   const user = await requireUser("/perfil/importar");
   const imports = await listImports(user.id);
+  const maxMb = Math.floor(getEnv().MAX_APPLE_IMPORT_BYTES / 1024 / 1024);
 
   return (
     <div className="mx-auto max-w-4xl">
       <PageHeader
         eyebrow="Seus dados"
         title="Importar do Apple Saúde"
-        description="Traga água, sono, movimento e passos do iPhone para o seu diário. Você revisa antes de confirmar."
+        description={`Traga água, sono, movimento e passos do iPhone para o seu diário. Você revisa antes de confirmar. Arquivo de até ${maxMb} MB.`}
         action={
           <Link href="/habitos" className="text-sm font-semibold text-tomato hover:underline">
             Ver hábitos
@@ -38,7 +40,7 @@ export default async function ImportPage() {
         <Card className="p-5">
           <h2 className="text-base font-semibold">Enviar exportação</h2>
           <div className="mt-3">
-            <AppleHealthImport />
+            <AppleHealthImport maxBytes={getEnv().MAX_APPLE_IMPORT_BYTES} />
           </div>
         </Card>
 

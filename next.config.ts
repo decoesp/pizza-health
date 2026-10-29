@@ -14,6 +14,10 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "12mb",
     },
+    // O proxy clona o corpo da requisição. O padrão de 10 MB truncava uploads
+    // maiores sem devolver erro. A importação do Apple Saúde fica fora do
+    // matcher do proxy e tem limite de domínio próprio.
+    proxyClientMaxBodySize: "13mb",
   },
   async headers() {
     return [

@@ -69,6 +69,10 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|icon.svg|robots.txt|sitemap.xml).*)",
+    // A importação do Apple Saúde envia corpos grandes (até MAX_APPLE_IMPORT_BYTES).
+    // O proxy clona e bufferiza o corpo com limite próprio; essa rota fica de
+    // fora do matcher para o upload chegar inteiro ao route handler, que aplica
+    // o limite de domínio e a autorização.
+    "/((?!api/import/apple-health/preview|_next/static|_next/image|favicon.ico|icon.svg|robots.txt|sitemap.xml).*)",
   ],
 };

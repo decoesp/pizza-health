@@ -30,8 +30,9 @@ function formatDay(date: string): string {
   return `${day}/${month}/${year}`;
 }
 
-export function AppleHealthImport() {
+export function AppleHealthImport({ maxBytes = 52_428_800 }: { maxBytes?: number }) {
   const router = useRouter();
+  const maxMb = Math.floor(maxBytes / 1024 / 1024);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [pending, setPending] = useState(false);
@@ -46,25 +47,45 @@ export function AppleHealthImport() {
       setError("Escolha o export.zip do app Saúde.");
       return;
     }
+    if (file.size === 0) {
+      setError("O arquivo está vazio.");
+      return;
+    }
+    if (file.size > maxBytes) {
+      setError(
+        `O arquivo tem ${(file.size / 1024 / 1024).toFixed(1)} MB e o limite é ${maxMb} MB. Exporte um período menor ou envie o export.xml já extraído.`,
+      );
+      return;
+    }
     setError(null);
     setResult(null);
     setPreview(null);
     setPending(true);
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 180_000);
     try {
       const body = new FormData();
       body.set("file", file);
       const response = await fetch("/api/import/apple-health/preview", {
         method: "POST",
         body,
+        signal: controller.signal,
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Falha ao ler o arquivo.");
       setPreview(data as Preview);
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "Falha ao ler o arquivo.",
-      );
+      if (cause instanceof Error && cause.name === "AbortError") {
+        setError(
+          "A leitura passou de 3 minutos e foi interrompida. Tente um arquivo menor ou envie só o export.xml.",
+        );
+      } else {
+        setError(
+          cause instanceof Error ? cause.message : "Falha ao ler o arquivo.",
+        );
+      }
     } finally {
+      window.clearTimeout(timer);
       setPending(false);
     }
   }
@@ -106,6 +127,7 @@ export function AppleHealthImport() {
         <p className="mt-2 text-xs text-muted">
           Importamos apenas água, sono, movimento e passos dos últimos 12 meses.
           Exames, diagnósticos, peso e outros dados clínicos ficam de fora.
+          Limite de {maxMb} MB por arquivo.
         </p>
       </div>
 
@@ -127,7 +149,7 @@ export function AppleHealthImport() {
           disabled={pending || !file}
           className="rounded-full bg-tomato px-4 py-2.5 text-sm font-semibold text-white hover:bg-tomato-deep disabled:opacity-60"
         >
-          {pending && !preview ? "Lendo arquivo…" : "Analisar arquivo"}
+          {pending && !preview ? "Enviando e analisando…" : "Analisar arquivo"}
         </button>
       </div>
 
