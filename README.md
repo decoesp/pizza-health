@@ -271,7 +271,7 @@ Resultados reais da validação final (28/10/2026):
 - **URL:** <https://pizza-health.app.pizzaria.foundation>
 - **Infra:** máquina `pizza-health` (`m-W2-BJrN7dGOErzGPin97qg`) na organização
   `decoesp` do pizzabase VMS, imagem `node:22.18-alpine3.21`, 2 GB de memória,
-  disco de 2 GB, idle timeout de 300 s. O deploy ativo é `d-1793216262589`,
+  disco de 2 GB, idle timeout de 300 s. O deploy ativo é `d-1793300874365`,
   status `ready`, com `health.pizzaria.foundation` registrado como domínio
   customizado (dependente de DNS).
 - **Banco em produção:** SQLite local em `/work/.data/pizza-health.db`
@@ -282,9 +282,8 @@ Resultados reais da validação final (28/10/2026):
   SQLite local.
 - **Repositório:** <https://github.com/decoesp/pizza-health> (público; nenhum
   segredo está no código).
-- **Código em produção:** branch `main`, commit `c44289a` (MVP + Pizza Auth +
-  passkeys + importação do Apple Saúde). A documentação segue em `56e79ee`; não
-  houve mudança de runtime depois do deploy.
+- **Código em produção:** branch `main`, commit `229a420` (MVP + Pizza Auth +
+  passkeys + importação do Apple Saúde + correção do limite de upload).
 - **Health check:** `GET /api/health` responde `status: ok`, `database: local`.
 - **Login federado:** o callback de produção registrado no Pizza Auth é
   `https://health.pizzaria.foundation/auth/callback`. Esse host ainda **não
