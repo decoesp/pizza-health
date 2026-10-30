@@ -167,7 +167,10 @@ não bloqueia a conta.
 
 O `export.zip` é lido em streaming (`yauzl` + `sax`), sem gravar o XML. O
 reconhecimento do formato inspeciona os primeiros 512 KB do arquivo, porque o
-`export.xml` do app Saúde tem um DOCTYPE extenso antes de `<HealthData>`. Só quatro
+`export.xml` do app Saúde tem um DOCTYPE extenso antes de `<HealthData>`. O
+navegador compacta XMLs acima de 4 MB em gzip antes do envio (o proxy da
+plataforma recusa corpos grandes); o servidor descompacta em streaming e aplica
+o limite de bytes ao conteúdo descompactado. Só quatro
 métricas entram, limitadas aos últimos 365 dias: água, sono, movimento
 (exercício declarado ou treino, o maior dos dois) e passos. O resultado agregado
 por dia fica em `apple_health_imports` por até 24 h como prévia; ao confirmar,

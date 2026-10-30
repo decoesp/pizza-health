@@ -249,7 +249,9 @@ Teste manual mínimo:
 - sair do ranking e confirmar que o nome some;
 - cadastrar uma passkey em Perfil → Segurança e entrar com ela em outra janela;
 - importar um `export.xml` real em Perfil → Importar e enviar arquivos, confirmar a
-  prévia, aplicar e desfazer;
+  prévia, aplicar e desfazer (XML acima de 4 MB vai compactado em gzip pelo
+  navegador; se o arquivo passar de ~40 MB sem compactar, o proxy da plataforma
+  aborta o envio);
 - enviar um laudo em PDF na mesma página e abrir a revisão manual do documento;
 - quando o DNS de `health.pizzaria.foundation` existir, testar o botão do Pizza
   Auth no host canônico e conferir o retorno em `/auth/callback`.

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { gzipSync } from "node:zlib";
 import { addDays, todayIso } from "../src/lib/domain/dates";
 import { parseAppleHealthFile } from "../src/lib/import/apple-health";
 
@@ -83,6 +84,18 @@ test("Apple Saúde: une segmentos de sono sobrepostos", async () => {
   );
   assert.equal(preview.days[0]?.date, addDays(day, 1));
   assert.equal(preview.days[0]?.sleepHours, 5);
+});
+
+test("Apple Saúde: lê export.xml compactado em gzip pelo navegador", async () => {
+  const day = addDays(todayIso(), -1);
+  const plain = xml([
+    `<Record type="HKQuantityTypeIdentifierStepCount" unit="count" value="4200" startDate="${appleDate(day, "08:00:00")}" endDate="${appleDate(day, "08:00:00")}"/>`,
+    `<Record type="HKQuantityTypeIdentifierDietaryWater" unit="mL" value="300" startDate="${appleDate(day, "09:00:00")}" endDate="${appleDate(day, "09:00:00")}"/>`,
+  ]);
+  const preview = await parseAppleHealthFile(gzipSync(plain));
+  assert.equal(preview.days[0]?.date, day);
+  assert.equal(preview.days[0]?.steps, 4200);
+  assert.equal(preview.days[0]?.waterMl, 300);
 });
 
 const CRC_TABLE = (() => {

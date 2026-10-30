@@ -25,6 +25,22 @@ type Summary = {
 
 type Preview = { id: string; summary: Summary; days: Day[] };
 
+const COMPRESS_ABOVE_BYTES = 4 * 1024 * 1024;
+
+/**
+ * XMLs reais do app Saúde passam de 40 MB e o proxy da plataforma recusa corpos
+ * grandes. Compactar no navegador deixa o envio pequeno e rápido; o servidor
+ * descompacta em streaming.
+ */
+async function compressXml(file: File): Promise<File> {
+  if (!file.name.toLowerCase().endsWith(".xml")) return file;
+  if (file.size < COMPRESS_ABOVE_BYTES) return file;
+  if (typeof CompressionStream === "undefined") return file;
+  const stream = file.stream().pipeThrough(new CompressionStream("gzip"));
+  const compressed = await new Response(stream).blob();
+  return new File([compressed], `${file.name}.gz`, { type: "application/gzip" });
+}
+
 function formatDay(date: string): string {
   const [year, month, day] = date.split("-");
   return `${day}/${month}/${year}`;
@@ -36,6 +52,7 @@ export function AppleHealthImport({ maxBytes = 52_428_800 }: { maxBytes?: number
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [pending, setPending] = useState(false);
+  const [phase, setPhase] = useState<"compress" | "upload" | null>(null);
   const [result, setResult] = useState<{
     imported: number;
     skipped: number;
@@ -61,11 +78,15 @@ export function AppleHealthImport({ maxBytes = 52_428_800 }: { maxBytes?: number
     setResult(null);
     setPreview(null);
     setPending(true);
+    setPhase("compress");
+    let timer = 0;
     const controller = new AbortController();
-    const timer = window.setTimeout(() => controller.abort(), 180_000);
     try {
+      const upload = await compressXml(file);
+      setPhase("upload");
+      timer = window.setTimeout(() => controller.abort(), 180_000);
       const body = new FormData();
-      body.set("file", file);
+      body.set("file", upload);
       const response = await fetch("/api/import/apple-health/preview", {
         method: "POST",
         body,
@@ -87,6 +108,7 @@ export function AppleHealthImport({ maxBytes = 52_428_800 }: { maxBytes?: number
     } finally {
       window.clearTimeout(timer);
       setPending(false);
+      setPhase(null);
     }
   }
 
@@ -138,14 +160,14 @@ export function AppleHealthImport({ maxBytes = 52_428_800 }: { maxBytes?: number
         <input
           type="file"
           data-testid="apple-health-file"
-          accept=".zip,.xml,application/zip,application/xml,text/xml"
+          accept=".zip,.xml,.gz,application/zip,application/xml,text/xml,application/gzip"
           onChange={(event) => {
             const selected = event.target.files?.[0] ?? null;
             const extension = selected?.name.toLowerCase().split(".").pop() ?? "";
             setPreview(null);
             setResult(null);
             setError(null);
-            if (selected && extension !== "xml" && extension !== "zip") {
+            if (selected && !["xml", "zip", "gz"].includes(extension)) {
               setFile(null);
               event.target.value = "";
               setError(
@@ -163,7 +185,11 @@ export function AppleHealthImport({ maxBytes = 52_428_800 }: { maxBytes?: number
           disabled={pending || !file}
           className="rounded-full bg-tomato px-4 py-2.5 text-sm font-semibold text-white hover:bg-tomato-deep disabled:opacity-60"
         >
-          {pending && !preview ? "Enviando e analisando…" : "Analisar arquivo"}
+          {pending && !preview
+            ? phase === "compress"
+              ? "Compactando arquivo…"
+              : "Enviando e analisando…"
+            : "Analisar arquivo"}
         </button>
       </div>
 

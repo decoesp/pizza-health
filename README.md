@@ -61,6 +61,10 @@ conteúdo público e sem classificar pessoas como "saudáveis" ou "doentes".
 - Leitura em streaming com `sax`, inclusive dentro do ZIP, sem gravar o XML bruto.
 - Reconhecimento do arquivo olha os primeiros 512 KB, porque o `export.xml` real
   traz um DOCTYPE com vários kilobytes antes de `<HealthData>`.
+- XML acima de 4 MB é compactado em gzip no navegador (`CompressionStream`) e
+  descompactado em streaming no servidor: o proxy da plataforma recusa corpos
+  grandes, e um XML de 85 MB vira ~4 MB. O limite configurado vale para o XML
+  original, não para o envio compactado.
 - Apenas água, sono, movimento e passos dos últimos 12 meses; sono tem segmentos
   sobrepostos unificados e duração limitada a 24 h por dia.
 - Prévia agregada por dia antes de confirmar; dias que já têm registro manual são
@@ -219,7 +223,7 @@ desligue `SEED_DEMO` e defina `ADMIN_EMAIL`/`ADMIN_PASSWORD` com uma senha real.
 | `OIDC_POST_LOGOUT_REDIRECT_URI` | `{site}` | Destino do logout no provedor |
 | `WEBAUTHN_RP_ID` | host de `NEXT_PUBLIC_SITE_URL` | RP ID das passkeys (domínio, sem porta) |
 | `WEBAUTHN_RP_NAME` | `Pizza Health` | Nome exibido no diálogo do dispositivo |
-| `MAX_APPLE_IMPORT_BYTES` | `52428800` | Limite do `export.zip` (máx. 200 MB); produção em 120 MB |
+| `MAX_APPLE_IMPORT_BYTES` | `52428800` | Limite do XML/ZIP original (máx. 200 MB); produção em 120 MB |
 
 Nunca versione `.env.local`. Em produção, configure os valores pelo mecanismo de
 segredos da infraestrutura.
@@ -256,7 +260,7 @@ e `export.zip`.
 
 Resultados reais da validação final (28/10/2026):
 
-- `npm test`: **45 testes, 45 aprovados** (8 suítes).
+- `npm test`: **46 testes, 46 aprovados** (8 suítes).
 - `npm run typecheck` (`tsgo`): **0 erros**.
 - `npm run lint`: **0 erros e 0 avisos**.
 - `npm run build`: **sucesso** (Next.js 16.4.3, standalone, 43 rotas).

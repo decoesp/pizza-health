@@ -136,9 +136,10 @@ test("Apple Saúde: aceita export.xml acima de 10 MB sem truncar", async ({ page
   await page.getByRole("button", { name: "Cancelar" }).click();
 });
 
-function pdfFile(): Buffer {
+function pdfFile(tag: string): Buffer {
   return Buffer.from(
     `%PDF-1.4
+% ${tag}
 1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj
 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj
 3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 200]>>endobj
@@ -150,16 +151,18 @@ trailer<</Root 1 0 R>>
 
 test("Documentos: envia laudo em PDF e abre a revisão manual", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === "mobile", "Upload de arquivo roda uma vez no desktop.");
+  const stamp = Date.now();
+  const fileName = `Laudo E2E ${stamp}.pdf`;
   await login(page);
   await page.goto(`${BASE}/perfil/importar`);
   await page.waitForLoadState("networkidle");
   await page.setInputFiles('[data-testid="document-file"]', {
-    name: "Laudo Completo 07_03_2025.pdf",
+    name: fileName,
     mimeType: "application/pdf",
-    buffer: pdfFile(),
+    buffer: pdfFile(String(stamp)),
   });
-  await expect(page.getByTestId("document-title")).toHaveValue("Laudo Completo 07 03 2025");
+  await expect(page.getByTestId("document-title")).toHaveValue(`Laudo E2E ${stamp}`);
   await page.getByRole("button", { name: "Enviar documento" }).click();
   await expect(page).toHaveURL(/\/exames\/doc_/, { timeout: 30_000 });
-  await expect(page.getByText("Laudo Completo 07 03 2025", { exact: false }).first()).toBeVisible();
+  await expect(page.getByText(`Laudo E2E ${stamp}`, { exact: false }).first()).toBeVisible();
 });

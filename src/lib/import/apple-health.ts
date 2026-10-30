@@ -1,6 +1,7 @@
 import "server-only";
 import { StringDecoder } from "node:string_decoder";
-import { Readable } from "node:stream";
+import { Readable, Transform } from "node:stream";
+import { createGunzip } from "node:zlib";
 import { parser as createParser } from "sax";
 import { fromBufferPromise } from "yauzl";
 import { addDays, todayIso } from "@/lib/domain/dates";
@@ -269,6 +270,36 @@ function isXml(buffer: Buffer): boolean {
   return /<HealthData[\s>]/i.test(head);
 }
 
+function isGzip(buffer: Buffer): boolean {
+  return buffer.length >= 2 && buffer[0] === 0x1f && buffer[1] === 0x8b;
+}
+
+/**
+ * O navegador compacta o XML grande em gzip antes de enviar, para caber no
+ * limite de corpo do proxy. O limite aqui é do XML já descompactado.
+ */
+function gunzipStream(buffer: Buffer): Readable {
+  let total = 0;
+  const counter = new Transform({
+    transform(chunk: Buffer, _encoding, callback) {
+      total += chunk.length;
+      if (total > MAX_XML_BYTES) {
+        callback(new Error("O export.xml é grande demais para importar."));
+        return;
+      }
+      callback(null, chunk);
+    },
+  });
+  const gunzip = createGunzip();
+  gunzip.on("error", (error) => {
+    counter.destroy(
+      error instanceof Error ? error : new Error("Falha ao descompactar o arquivo."),
+    );
+  });
+  Readable.from([buffer]).pipe(gunzip).pipe(counter);
+  return counter;
+}
+
 export async function parseAppleHealthFile(
   buffer: Buffer,
 ): Promise<AppleHealthPreview> {
@@ -276,6 +307,8 @@ export async function parseAppleHealthFile(
   let stream: Readable;
   if (isZip(buffer)) {
     stream = await readZipStream(buffer);
+  } else if (isGzip(buffer)) {
+    stream = gunzipStream(buffer);
   } else if (isXml(buffer)) {
     stream = Readable.from([buffer]);
   } else {
