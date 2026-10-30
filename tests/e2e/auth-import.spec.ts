@@ -85,7 +85,8 @@ test("passkey: cadastra, entra sem senha e remove", async ({ page, context }, te
 test("Apple Saúde: prévia, importação e reversão", async ({ page }) => {
   await login(page);
   await page.goto(`${BASE}/perfil/importar`);
-  await page.setInputFiles('input[type="file"]', {
+  await page.waitForLoadState("networkidle");
+  await page.setInputFiles('[data-testid="apple-health-file"]', {
     name: "export.xml",
     mimeType: "application/xml",
     buffer: appleHealthXml(),
@@ -118,11 +119,13 @@ test("Pizza Auth: login por senha continua disponível como alternativa", async 
 
 test("Apple Saúde: aceita export.xml acima de 10 MB sem truncar", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === "mobile", "Arquivo grande; roda uma vez no desktop.");
+  test.setTimeout(180_000);
   await login(page);
   await page.goto(`${BASE}/perfil/importar`);
+  await page.waitForLoadState("networkidle");
   const buffer = bigAppleHealthXml();
   expect(buffer.length).toBeGreaterThan(10 * 1024 * 1024);
-  await page.setInputFiles('input[type="file"]', {
+  await page.setInputFiles('[data-testid="apple-health-file"]', {
     name: "export.xml",
     mimeType: "application/xml",
     buffer,
@@ -131,4 +134,32 @@ test("Apple Saúde: aceita export.xml acima de 10 MB sem truncar", async ({ page
   await expect(page.getByText("Prévia da importação")).toBeVisible({ timeout: 120_000 });
   await expect(page.getByText("Dias com dados")).toBeVisible();
   await page.getByRole("button", { name: "Cancelar" }).click();
+});
+
+function pdfFile(): Buffer {
+  return Buffer.from(
+    `%PDF-1.4
+1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj
+2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj
+3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 200]>>endobj
+trailer<</Root 1 0 R>>
+%%EOF`,
+    "latin1",
+  );
+}
+
+test("Documentos: envia laudo em PDF e abre a revisão manual", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === "mobile", "Upload de arquivo roda uma vez no desktop.");
+  await login(page);
+  await page.goto(`${BASE}/perfil/importar`);
+  await page.waitForLoadState("networkidle");
+  await page.setInputFiles('[data-testid="document-file"]', {
+    name: "Laudo Completo 07_03_2025.pdf",
+    mimeType: "application/pdf",
+    buffer: pdfFile(),
+  });
+  await expect(page.getByTestId("document-title")).toHaveValue("Laudo Completo 07 03 2025");
+  await page.getByRole("button", { name: "Enviar documento" }).click();
+  await expect(page).toHaveURL(/\/exames\/doc_/, { timeout: 30_000 });
+  await expect(page.getByText("Laudo Completo 07 03 2025", { exact: false }).first()).toBeVisible();
 });

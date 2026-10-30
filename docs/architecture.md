@@ -165,7 +165,9 @@ não bloqueia a conta.
 
 ### 11. Importação do Apple Saúde com prévia e reversão
 
-O `export.zip` é lido em streaming (`yauzl` + `sax`), sem gravar o XML. Só quatro
+O `export.zip` é lido em streaming (`yauzl` + `sax`), sem gravar o XML. O
+reconhecimento do formato inspeciona os primeiros 512 KB do arquivo, porque o
+`export.xml` do app Saúde tem um DOCTYPE extenso antes de `<HealthData>`. Só quatro
 métricas entram, limitadas aos últimos 365 dias: água, sono, movimento
 (exercício declarado ou treino, o maior dos dois) e passos. O resultado agregado
 por dia fica em `apple_health_imports` por até 24 h como prévia; ao confirmar,

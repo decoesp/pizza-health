@@ -248,8 +248,9 @@ Teste manual mínimo:
 - confirmar que outro membro não vê o documento sem compartilhamento;
 - sair do ranking e confirmar que o nome some;
 - cadastrar uma passkey em Perfil → Segurança e entrar com ela em outra janela;
-- importar um `export.xml` de teste em Perfil → Importar Apple Saúde, confirmar a
+- importar um `export.xml` real em Perfil → Importar e enviar arquivos, confirmar a
   prévia, aplicar e desfazer;
+- enviar um laudo em PDF na mesma página e abrir a revisão manual do documento;
 - quando o DNS de `health.pizzaria.foundation` existir, testar o botão do Pizza
   Auth no host canônico e conferir o retorno em `/auth/callback`.
 

@@ -59,6 +59,8 @@ conteúdo público e sem classificar pessoas como "saudáveis" ou "doentes".
   com limite configurável (padrão 50 MB; produção em 120 MB). A rota de upload
   fica fora do matcher do proxy para o corpo grande não ser truncado.
 - Leitura em streaming com `sax`, inclusive dentro do ZIP, sem gravar o XML bruto.
+- Reconhecimento do arquivo olha os primeiros 512 KB, porque o `export.xml` real
+  traz um DOCTYPE com vários kilobytes antes de `<HealthData>`.
 - Apenas água, sono, movimento e passos dos últimos 12 meses; sono tem segmentos
   sobrepostos unificados e duração limitada a 24 h por dia.
 - Prévia agregada por dia antes de confirmar; dias que já têm registro manual são
@@ -67,6 +69,9 @@ conteúdo público e sem classificar pessoas como "saudáveis" ou "doentes".
   apenas o que veio do arquivo.
 - Nenhum ponto de ranking é concedido por importação; o arquivo é processado em
   memória e descartado.
+- A mesma página aceita **laudos e outros documentos** (PDF, CSV, XLS, XLSX, JPG
+  ou PNG até 8 MB), que vão para a central criptografada com revisão manual —
+  sem OCR e sem extração automática de resultados.
 
 ### Exames e documentos
 - Upload de PDF, CSV, XLS, XLSX, JPG e PNG com validação pela assinatura binária.
@@ -251,7 +256,7 @@ e `export.zip`.
 
 Resultados reais da validação final (28/10/2026):
 
-- `npm test`: **44 testes, 44 aprovados** (8 suítes).
+- `npm test`: **45 testes, 45 aprovados** (8 suítes).
 - `npm run typecheck` (`tsgo`): **0 erros**.
 - `npm run lint`: **0 erros e 0 avisos**.
 - `npm run build`: **sucesso** (Next.js 16.4.3, standalone, 43 rotas).

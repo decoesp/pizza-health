@@ -4,11 +4,13 @@ import { requireUser } from "@/lib/auth/session";
 import { listImports } from "@/lib/import/apple-health-store";
 import { Card, Notice, PageHeader } from "@/components/ui/Primitives";
 import { AppleHealthImport } from "@/components/import/AppleHealthImport";
+import { DocumentUploadForm } from "@/components/import/DocumentUploadForm";
 import { UndoImportButton } from "@/components/import/UndoImportButton";
-import { formatDateTime } from "@/lib/domain/dates";
+import { formatDateTime, todayIso } from "@/lib/domain/dates";
 import { getEnv } from "@/lib/env";
+import { formatBytes } from "@/lib/crypto/documents";
 
-export const metadata: Metadata = { title: "Importar Apple Saúde" };
+export const metadata: Metadata = { title: "Importar e enviar arquivos" };
 export const dynamic = "force-dynamic";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -21,35 +23,58 @@ const STATUS_LABEL: Record<string, string> = {
 export default async function ImportPage() {
   const user = await requireUser("/perfil/importar");
   const imports = await listImports(user.id);
-  const maxMb = Math.floor(getEnv().MAX_APPLE_IMPORT_BYTES / 1024 / 1024);
+  const env = getEnv();
+  const maxMb = Math.floor(env.MAX_APPLE_IMPORT_BYTES / 1024 / 1024);
 
   return (
     <div className="mx-auto max-w-4xl">
       <PageHeader
         eyebrow="Seus dados"
-        title="Importar do Apple Saúde"
-        description={`Traga água, sono, movimento e passos do iPhone para o seu diário. Você revisa antes de confirmar. Arquivo de até ${maxMb} MB.`}
+        title="Importar e enviar arquivos"
+        description="Traga água, sono, movimento e passos do Apple Saúde ou guarde laudos e outros documentos na sua central privada. Você revisa antes de confirmar."
         action={
-          <Link href="/habitos" className="text-sm font-semibold text-tomato hover:underline">
-            Ver hábitos
+          <Link href="/exames" className="text-sm font-semibold text-tomato hover:underline">
+            Ver documentos
           </Link>
         }
       />
 
       <div className="space-y-6">
-        <Card className="p-5">
-          <h2 className="text-base font-semibold">Enviar exportação</h2>
-          <div className="mt-3">
-            <AppleHealthImport maxBytes={getEnv().MAX_APPLE_IMPORT_BYTES} />
-          </div>
-        </Card>
+        <div id="apple-saude" className="scroll-mt-24">
+          <Card className="p-5">
+            <h2 className="text-base font-semibold">Exportação do Apple Saúde</h2>
+            <p className="mt-1 text-xs text-muted">
+              Arquivos <code className="font-mono">export.xml</code> ou{" "}
+              <code className="font-mono">export.zip</code>, até {maxMb} MB.
+            </p>
+            <div className="mt-3">
+              <AppleHealthImport maxBytes={env.MAX_APPLE_IMPORT_BYTES} />
+            </div>
+          </Card>
+        </div>
 
         <Notice tone="info">
-          O arquivo é processado no servidor apenas para gerar a prévia. Não
-          guardamos o XML bruto nem dados clínicos; depois de aplicar, mantemos só
-          os registros diários dos quatro hábitos. Importações não geram pontos de
-          ranking.
+          O arquivo do Apple Saúde é processado no servidor apenas para gerar a
+          prévia. Não guardamos o XML bruto nem dados clínicos; depois de aplicar,
+          mantemos só os registros diários dos quatro hábitos. Importações não geram
+          pontos de ranking.
         </Notice>
+
+        <div id="documentos" className="scroll-mt-24">
+          <Card className="p-5">
+            <h2 className="text-base font-semibold">Laudos e outros documentos</h2>
+            <p className="mt-1 text-xs text-muted">
+              Sangue, imagem, vacina, receita: envie o PDF ou a foto. O original fica
+              criptografado e você decide se compartilha com alguma comunidade.
+            </p>
+            <div className="mt-3">
+              <DocumentUploadForm
+                maxLabel={formatBytes(env.MAX_UPLOAD_BYTES)}
+                today={todayIso()}
+              />
+            </div>
+          </Card>
+        </div>
 
         <Card className="p-5">
           <h2 className="text-base font-semibold">Histórico</h2>

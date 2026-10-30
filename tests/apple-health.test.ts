@@ -53,6 +53,26 @@ test("Apple Saúde: agrega água, sono, movimento e passos por dia", async () =>
   assert.equal(preview.summary.stepDays, 1);
 });
 
+test("Apple Saúde: reconhece export.xml com DOCTYPE longo antes de HealthData", async () => {
+  const day = addDays(todayIso(), -1);
+  const attlist = Array.from(
+    { length: 400 },
+    (_, index) => `<!ATTLIST Record campo${index} CDATA #IMPLIED>`,
+  ).join("\n");
+  const body = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE HealthData [
+${attlist}
+]>
+<HealthData locale="pt_BR">
+  <Record type="HKQuantityTypeIdentifierStepCount" unit="count" value="1200" startDate="${appleDate(day, "09:00:00")}" endDate="${appleDate(day, "09:00:00")}"/>
+</HealthData>`;
+
+  assert.ok(body.indexOf("<HealthData") > 4096);
+  const preview = await parseAppleHealthFile(Buffer.from(body, "utf8"));
+  assert.equal(preview.days[0]?.date, day);
+  assert.equal(preview.days[0]?.steps, 1200);
+});
+
 test("Apple Saúde: une segmentos de sono sobrepostos", async () => {
   const day = addDays(todayIso(), -2);
   const preview = await parseAppleHealthFile(

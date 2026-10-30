@@ -31,6 +31,10 @@ export type AppleHealthPreview = {
 };
 
 const MAX_XML_BYTES = 300 * 1024 * 1024;
+// O export do app Saúde traz um DOCTYPE grande (com centenas de linhas de
+// ATTLIST) antes de <HealthData>, então é preciso olhar bem além dos primeiros
+// kilobytes para reconhecer o arquivo.
+const XML_PROBE_BYTES = 512 * 1024;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 type Attributes = Record<string, string>;
@@ -261,7 +265,7 @@ function isZip(buffer: Buffer): boolean {
 }
 
 function isXml(buffer: Buffer): boolean {
-  const head = buffer.subarray(0, 4096).toString("utf8");
+  const head = buffer.subarray(0, XML_PROBE_BYTES).toString("utf8");
   return /<HealthData[\s>]/i.test(head);
 }
 
@@ -275,7 +279,9 @@ export async function parseAppleHealthFile(
   } else if (isXml(buffer)) {
     stream = Readable.from([buffer]);
   } else {
-    throw new Error("Envie o export.zip ou o export.xml do app Saúde.");
+    throw new Error(
+      "Arquivo não reconhecido. Envie o export.xml ou o export.zip gerado pelo app Saúde; laudos em PDF devem ir em “Laudos e outros documentos”.",
+    );
   }
 
   const today = todayIso();

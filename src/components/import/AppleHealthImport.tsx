@@ -44,7 +44,7 @@ export function AppleHealthImport({ maxBytes = 52_428_800 }: { maxBytes?: number
 
   async function handlePreview() {
     if (!file) {
-      setError("Escolha o export.zip do app Saúde.");
+      setError("Escolha o export.xml ou o export.zip do app Saúde.");
       return;
     }
     if (file.size === 0) {
@@ -122,7 +122,10 @@ export function AppleHealthImport({ maxBytes = 52_428_800 }: { maxBytes?: number
         <ol className="mt-2 list-decimal space-y-1 pl-5 text-xs text-muted">
           <li>Abra o app Saúde e toque na sua foto no canto superior direito.</li>
           <li>Toque em “Exportar Todos os Dados de Saúde”.</li>
-          <li>Envie o arquivo <code className="font-mono">export.zip</code> abaixo.</li>
+          <li>
+            Envie o <code className="font-mono">export.zip</code> ou o{" "}
+            <code className="font-mono">export.xml</code> já extraído abaixo.
+          </li>
         </ol>
         <p className="mt-2 text-xs text-muted">
           Importamos apenas água, sono, movimento e passos dos últimos 12 meses.
@@ -134,12 +137,23 @@ export function AppleHealthImport({ maxBytes = 52_428_800 }: { maxBytes?: number
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
         <input
           type="file"
+          data-testid="apple-health-file"
           accept=".zip,.xml,application/zip,application/xml,text/xml"
           onChange={(event) => {
-            setFile(event.target.files?.[0] ?? null);
+            const selected = event.target.files?.[0] ?? null;
+            const extension = selected?.name.toLowerCase().split(".").pop() ?? "";
             setPreview(null);
             setResult(null);
             setError(null);
+            if (selected && extension !== "xml" && extension !== "zip") {
+              setFile(null);
+              event.target.value = "";
+              setError(
+                "Este arquivo não é uma exportação do Apple Saúde. Para laudos e PDFs use “Laudos e outros documentos” logo abaixo.",
+              );
+              return;
+            }
+            setFile(selected);
           }}
           className="min-w-0 flex-1 rounded-xl border border-line bg-surface px-3 py-2 text-sm file:mr-3 file:rounded-full file:border-0 file:bg-paper-deep file:px-3 file:py-1.5 file:text-xs file:font-semibold"
         />
@@ -237,6 +251,9 @@ export function AppleHealthImport({ maxBytes = 52_428_800 }: { maxBytes?: number
           <p className="mt-2 text-xs text-muted">
             Mostrando os últimos {preview.days.length} dias. Dias que já têm registro
             manual não serão sobrescritos.
+            {preview.summary.ignoredRecords > 0
+              ? ` ${preview.summary.ignoredRecords.toLocaleString("pt-BR")} registro(s) ficaram fora dos últimos 12 meses ou não são compatíveis com os quatro hábitos.`
+              : ""}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button
